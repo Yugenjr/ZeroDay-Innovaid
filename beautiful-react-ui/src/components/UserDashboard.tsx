@@ -4,6 +4,7 @@ import StudentAnnouncements from './student/StudentAnnouncements';
 import StudentLostFound from './student/StudentLostFound';
 import StudentTimetable from './student/StudentTimetable';
 import StudentHostelComplaints from './student/StudentHostelComplaints';
+import SkillExchange from './student/SkillExchange';
 
 
 
@@ -124,6 +125,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
       key: 'hostel'
     },
     {
+      icon: '🎓',
+      title: 'Skill Exchange',
+      description: 'Create courses, teach skills, and learn from peers in collaborative sessions.',
+      key: 'skillexchange'
+    },
+    {
       icon: '📚',
       title: 'Library Services',
       description: 'Book reservations, study room bookings, and digital resources access.',
@@ -169,6 +176,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         return <StudentTimetable user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'hostel':
         return <StudentHostelComplaints user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+      case 'skillexchange':
+        return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       default:
         return (
           <div style={containerStyle}>
