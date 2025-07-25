@@ -68,7 +68,30 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
     };
   }, [user.uid]);
 
+  // Load AI chatbot script only for student dashboard main page
+  useEffect(() => {
+    if (!activeSection) { // Only load on main dashboard
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jotfor.ms/agent/embedjs/019841e2f27b773f9709beed9eddfdee97d2/embed.js?skipWelcome=1&maximizable=1';
+      script.async = true;
+      document.body.appendChild(script);
 
+      // Cleanup function to remove script when component unmounts or section changes
+      return () => {
+        const existingScript = document.querySelector('script[src*="jotfor.ms"]');
+        if (existingScript) {
+          document.body.removeChild(existingScript);
+        }
+        // Also remove any chatbot elements that might have been created
+        const chatbotElements = document.querySelectorAll('[id*="jotform"], [class*="jotform"]');
+        chatbotElements.forEach(element => {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        });
+      };
+    }
+  }, [activeSection]);
 
   // Handle feedback form submission
   const handleFeedbackSubmit = (e: React.FormEvent) => {
@@ -749,13 +772,49 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
 
   return (
     <>
-      {/* Add CSS animation for notification badge */}
+      {/* Add CSS animation for notification badge and chatbot styling */}
       <style>
         {`
           @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
             100% { transform: scale(1); }
+          }
+
+          /* AI Chatbot Styling - Force circular shape and bottom-right positioning */
+          [id*="jotform"] {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            z-index: 9999 !important;
+            border-radius: 50% !important;
+            width: 60px !important;
+            height: 60px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            transition: all 0.3s ease !important;
+          }
+
+          [id*="jotform"]:hover {
+            transform: scale(1.1) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+          }
+
+          /* Style the chatbot button/icon */
+          [id*="jotform"] iframe,
+          [id*="jotform"] > div {
+            border-radius: 50% !important;
+            width: 100% !important;
+            height: 100% !important;
+          }
+
+          /* Hide chatbot on mobile screens if needed */
+          @media (max-width: 768px) {
+            [id*="jotform"] {
+              width: 50px !important;
+              height: 50px !important;
+              bottom: 15px !important;
+              right: 15px !important;
+            }
           }
         `}
       </style>
@@ -944,6 +1003,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
           ))}
         </div>
       </main>
+
+      {/* AI Chatbot will automatically appear in bottom-right corner when on main dashboard */}
+      {/* The chatbot is loaded via useEffect and styled with CSS above */}
     </div>
     </>
   );
