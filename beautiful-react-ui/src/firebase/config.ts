@@ -1,15 +1,9 @@
 // Import the functions you need from the SDKs you need
-// @ts-ignore
 import { initializeApp } from 'firebase/app';
-// @ts-ignore
 import { getAuth } from 'firebase/auth';
-// @ts-ignore
 import { getFirestore } from 'firebase/firestore';
-// @ts-ignore
 import { getStorage } from 'firebase/storage';
-// @ts-ignore
 import { getDatabase } from 'firebase/database';
-// @ts-ignore
 import { getAnalytics } from 'firebase/analytics';
 
 // Your web app's Firebase configuration

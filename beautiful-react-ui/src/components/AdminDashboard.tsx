@@ -278,7 +278,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       case 'announcements':
         return <AnnouncementManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'lostfound':
-        return <LostFoundManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} items={mockLostFoundItems} />;
+        return <LostFoundManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'timetable':
         return <TimetableManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'hostel':

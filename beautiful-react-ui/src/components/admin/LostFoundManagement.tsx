@@ -1,17 +1,6 @@
-import React, { useState } from 'react';
-
-interface LostFoundItem {
-  id: string;
-  type: 'lost' | 'found';
-  itemName: string;
-  category: string;
-  location: string;
-  date: string;
-  description: string;
-  reportedBy: string;
-  status: 'pending' | 'claimed' | 'resolved';
-  image: string;
-}
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { getAllLostFoundItems, updateLostFoundItemStatus, deleteLostFoundItem, LostFoundItem } from '../../firebase/lostFound';
 
 interface User {
   _id: string;
@@ -24,15 +13,37 @@ interface LostFoundManagementProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
-  items: LostFoundItem[];
 }
 
-const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack, onLogout, items: initialItems }) => {
-  const [items, setItems] = useState(initialItems);
+const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack, onLogout }) => {
+  const [items, setItems] = useState<LostFoundItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'lost' | 'found'>('all');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [selectedItem, setSelectedItem] = useState<LostFoundItem | null>(null);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    setLoading(true);
+    try {
+      const result = await getAllLostFoundItems();
+      if (result.success) {
+        setItems(result.items);
+      } else {
+        console.error('Failed to load items:', result.message);
+      }
+    } catch (error) {
+      console.error('Error loading items:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -154,15 +165,45 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
     return matchesType && matchesStatus && matchesCategory;
   });
 
-  const handleStatusChange = (itemId: string, newStatus: string) => {
-    setItems(items.map(item => 
-      item.id === itemId ? { ...item, status: newStatus as 'pending' | 'claimed' | 'resolved' } : item
-    ));
+  const handleStatusChange = async (itemId: string, newStatus: string) => {
+    setUpdating(itemId);
+    try {
+      const result = await updateLostFoundItemStatus(itemId, newStatus as any, user.name);
+      if (result.success) {
+        // Reload items to get updated data
+        await loadItems();
+        console.log('✅ Status updated successfully');
+      } else {
+        console.error('Failed to update status:', result.message);
+        alert('Failed to update status. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Error updating status. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
   };
 
-  const handleDeleteItem = (itemId: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      setItems(items.filter(item => item.id !== itemId));
+  const handleDeleteItem = async (itemId: string) => {
+    if (window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+      setUpdating(itemId);
+      try {
+        const result = await deleteLostFoundItem(itemId);
+        if (result.success) {
+          // Reload items to get updated data
+          await loadItems();
+          console.log('✅ Item deleted successfully');
+        } else {
+          console.error('Failed to delete item:', result.message);
+          alert('Failed to delete item. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Error deleting item. Please try again.');
+      } finally {
+        setUpdating(null);
+      }
     }
   };
 
@@ -185,6 +226,19 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
   };
 
   const stats = getStats();
+
+  if (loading) {
+    return (
+      <div style={containerStyle}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div style={{ textAlign: 'center', color: 'white' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔄</div>
+            <div>Loading lost and found items...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={containerStyle}>
@@ -331,24 +385,36 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
                   {item.status === 'pending' && (
                     <>
                       <button
-                        style={{ ...buttonStyle, background: '#10b981', color: 'white' }}
+                        style={{
+                          ...buttonStyle,
+                          background: updating === item.id ? '#6b7280' : '#10b981',
+                          color: 'white',
+                          opacity: updating === item.id ? 0.7 : 1
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleStatusChange(item.id, item.type === 'lost' ? 'resolved' : 'claimed');
+                          if (item.id) handleStatusChange(item.id, item.type === 'lost' ? 'resolved' : 'claimed');
                         }}
+                        disabled={updating === item.id}
                       >
-                        {item.type === 'lost' ? 'Mark Found' : 'Mark Claimed'}
+                        {updating === item.id ? '⏳ Updating...' : (item.type === 'lost' ? 'Mark Found' : 'Mark Claimed')}
                       </button>
                     </>
                   )}
                   <button
-                    style={{ ...buttonStyle, background: '#ef4444', color: 'white' }}
+                    style={{
+                      ...buttonStyle,
+                      background: updating === item.id ? '#6b7280' : '#ef4444',
+                      color: 'white',
+                      opacity: updating === item.id ? 0.7 : 1
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteItem(item.id);
+                      if (item.id) handleDeleteItem(item.id);
                     }}
+                    disabled={updating === item.id}
                   >
-                    Delete
+                    {updating === item.id ? '⏳ Deleting...' : 'Delete'}
                   </button>
                 </div>
               </div>
@@ -432,8 +498,10 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
                   <button
                     style={{ ...buttonStyle, background: '#10b981', color: 'white' }}
                     onClick={() => {
-                      handleStatusChange(selectedItem.id, selectedItem.type === 'lost' ? 'resolved' : 'claimed');
-                      setSelectedItem(null);
+                      if (selectedItem.id) {
+                        handleStatusChange(selectedItem.id, selectedItem.type === 'lost' ? 'resolved' : 'claimed');
+                        setSelectedItem(null);
+                      }
                     }}
                   >
                     {selectedItem.type === 'lost' ? 'Mark as Found' : 'Mark as Claimed'}
