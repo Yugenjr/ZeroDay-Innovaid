@@ -29,6 +29,11 @@ const SimpleLogin: React.FC = () => {
   const [message, setMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
+  // Sync formData role with selectedRole
+  React.useEffect(() => {
+    setFormData(prev => ({ ...prev, role: selectedRole }));
+  }, [selectedRole]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -269,13 +274,19 @@ const SimpleLogin: React.FC = () => {
         <div style={{ display: 'flex', marginBottom: '2rem' }}>
           <button
             style={roleButtonStyle(selectedRole === 'user')}
-            onClick={() => setSelectedRole('user')}
+            onClick={() => {
+              setSelectedRole('user');
+              setFormData({ ...formData, role: 'user' });
+            }}
           >
             👨‍🎓 Student
           </button>
           <button
             style={roleButtonStyle(selectedRole === 'admin')}
-            onClick={() => setSelectedRole('admin')}
+            onClick={() => {
+              setSelectedRole('admin');
+              setFormData({ ...formData, role: 'admin' });
+            }}
           >
             🛡️ Admin
           </button>

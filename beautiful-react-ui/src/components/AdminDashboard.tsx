@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
+import { User } from '../types/User';
 import StudentManagement from './admin/StudentManagement';
 import AnnouncementManagement from './admin/AnnouncementManagement';
 import LostFoundManagement from './admin/LostFoundManagement';
 import TimetableManagement from './admin/TimetableManagement';
 import HostelManagement from './admin/HostelManagement';
-
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-}
 
 interface AdminDashboardProps {
   user: User;
