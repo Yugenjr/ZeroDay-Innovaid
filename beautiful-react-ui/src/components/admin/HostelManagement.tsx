@@ -1,18 +1,8 @@
-import React, { useState } from 'react';
-
-interface HostelComplaint {
-  id: string;
-  type: string;
-  room: string;
-  hostelBlock: string;
-  description: string;
-  status: 'pending' | 'in-progress' | 'resolved';
-  date: string;
-  raisedBy: string;
-  assignedTo?: string;
-  resolvedDate?: string;
-  priority: 'low' | 'medium' | 'high';
-}
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { getAllHostelComplaints, updateHostelComplaintStatus, HostelComplaint } from '../../firebase/hostelComplaints';
+// @ts-ignore
+import { getAllLostFoundItems, updateLostFoundItemStatus, LostFoundItem } from '../../firebase/lostFound';
 
 interface User {
   _id: string;
@@ -28,22 +18,111 @@ interface HostelManagementProps {
   complaints: HostelComplaint[];
 }
 
-const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLogout, complaints: initialComplaints }) => {
-  const [complaints, setComplaints] = useState<HostelComplaint[]>(
-    initialComplaints.map(complaint => ({
-      ...complaint,
-      priority: complaint.priority || 'medium'
-    }))
-  );
-
-  // Save complaints to localStorage whenever complaints change
-  React.useEffect(() => {
-    localStorage.setItem('hostelComplaints', JSON.stringify(complaints));
-  }, [complaints]);
+const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLogout }) => {
+  const [complaints, setComplaints] = useState<HostelComplaint[]>([]);
+  const [lostFoundItems, setLostFoundItems] = useState<LostFoundItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState('');
+  const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState<'complaints' | 'lostfound'>('complaints');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterBlock, setFilterBlock] = useState('');
   const [selectedComplaint, setSelectedComplaint] = useState<HostelComplaint | null>(null);
+  const [selectedLostFoundItem, setSelectedLostFoundItem] = useState<LostFoundItem | null>(null);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Load hostel complaints
+      const complaintsResult = await getAllHostelComplaints();
+      if (complaintsResult.success) {
+        setComplaints(complaintsResult.complaints);
+      }
+
+      // Load lost & found items
+      const lostFoundResult = await getAllLostFoundItems();
+      if (lostFoundResult.success) {
+        setLostFoundItems(lostFoundResult.items);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setMessage('❌ Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle complaint status update
+  const handleComplaintStatusUpdate = async (
+    complaintId: string,
+    status: 'pending' | 'in-progress' | 'resolved',
+    adminNotes?: string,
+    assignedTo?: string
+  ) => {
+    setProcessing(complaintId);
+    try {
+      const result = await updateHostelComplaintStatus(complaintId, status, adminNotes, assignedTo);
+      if (result.success) {
+        setMessage(`✅ Complaint ${status} successfully`);
+        loadData(); // Refresh data
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error updating complaint status:', error);
+      setMessage('❌ Failed to update complaint status');
+    } finally {
+      setProcessing('');
+    }
+  };
+
+  // Handle lost & found item status update
+  const handleLostFoundStatusUpdate = async (
+    itemId: string,
+    status: 'pending' | 'approved' | 'rejected' | 'claimed' | 'resolved',
+    adminNotes?: string
+  ) => {
+    setProcessing(itemId);
+    try {
+      const result = await updateLostFoundItemStatus(itemId, status, adminNotes, user.name);
+      if (result.success) {
+        setMessage(`✅ Item ${status} successfully`);
+        loadData(); // Refresh data
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error updating lost & found item status:', error);
+      setMessage('❌ Failed to update item status');
+    } finally {
+      setProcessing('');
+    }
+  };
+
+  // Handle approve lost & found item
+  const handleApproveLostFoundItem = async (itemId: string) => {
+    const adminNotes = prompt('Add approval notes (optional):');
+    await handleLostFoundStatusUpdate(itemId, 'approved', adminNotes || '');
+  };
+
+  // Handle reject lost & found item
+  const handleRejectLostFoundItem = async (itemId: string) => {
+    const adminNotes = prompt('Please provide reason for rejection:');
+    if (adminNotes && adminNotes.trim()) {
+      await handleLostFoundStatusUpdate(itemId, 'rejected', adminNotes.trim());
+    } else {
+      setMessage('❌ Rejection reason is required');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -375,7 +454,7 @@ const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLog
                       style={{ ...buttonStyle, background: '#3b82f6', color: 'white' }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleStatusChange(complaint.id, 'in-progress');
+                        if (complaint.id) handleComplaintStatusUpdate(complaint.id, 'in-progress');
                       }}
                     >
                       Start Work
@@ -386,7 +465,7 @@ const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLog
                       style={{ ...buttonStyle, background: '#10b981', color: 'white' }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleStatusChange(complaint.id, 'resolved');
+                        if (complaint.id) handleComplaintStatusUpdate(complaint.id, 'resolved');
                       }}
                     >
                       Mark Resolved
@@ -396,7 +475,10 @@ const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLog
                     style={{ ...buttonStyle, background: '#ef4444', color: 'white' }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteComplaint(complaint.id);
+                      if (complaint.id) {
+                        // Add delete functionality if needed
+                        console.log('Delete complaint:', complaint.id);
+                      }
                     }}
                   >
                     Delete
@@ -496,7 +578,12 @@ const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLog
                         background: selectedComplaint.priority === priority ? '#667eea' : '#e2e8f0',
                         color: selectedComplaint.priority === priority ? 'white' : '#333'
                       }}
-                      onClick={() => handlePriorityChange(selectedComplaint.id, priority as 'low' | 'medium' | 'high')}
+                      onClick={() => {
+                        if (selectedComplaint?.id) {
+                          // Add priority change functionality if needed
+                          console.log('Change priority:', selectedComplaint.id, priority);
+                        }
+                      }}
                     >
                       {priority.charAt(0).toUpperCase() + priority.slice(1)}
                     </button>
@@ -509,7 +596,9 @@ const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLog
                   <button
                     style={{ ...buttonStyle, background: '#3b82f6', color: 'white' }}
                     onClick={() => {
-                      handleStatusChange(selectedComplaint.id, 'in-progress');
+                      if (selectedComplaint?.id) {
+                        handleComplaintStatusUpdate(selectedComplaint.id, 'in-progress');
+                      }
                       setSelectedComplaint(null);
                     }}
                   >
@@ -520,7 +609,9 @@ const HostelManagement: React.FC<HostelManagementProps> = ({ user, onBack, onLog
                   <button
                     style={{ ...buttonStyle, background: '#10b981', color: 'white' }}
                     onClick={() => {
-                      handleStatusChange(selectedComplaint.id, 'resolved');
+                      if (selectedComplaint?.id) {
+                        handleComplaintStatusUpdate(selectedComplaint.id, 'resolved');
+                      }
                       setSelectedComplaint(null);
                     }}
                   >

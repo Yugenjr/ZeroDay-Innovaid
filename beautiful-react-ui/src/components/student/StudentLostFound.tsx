@@ -1,17 +1,6 @@
-import React, { useState } from 'react';
-
-interface LostFoundItem {
-  id: string;
-  type: 'lost' | 'found';
-  itemName: string;
-  category: string;
-  location: string;
-  date: string;
-  description: string;
-  reportedBy: string;
-  status: 'pending' | 'claimed' | 'resolved';
-  image?: string;
-}
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { createLostFoundItem, getApprovedLostFoundItems, getStudentLostFoundItems, LostFoundItem } from '../../firebase/lostFound';
 
 interface User {
   _id: string;
@@ -30,17 +19,12 @@ interface StudentLostFoundProps {
   onLogout: () => void;
 }
 
-// Mock lost & found items
-const mockItems: LostFoundItem[] = [
-  { id: '1', type: 'lost', itemName: 'Blue Backpack', category: 'Bag', location: 'Main Library', date: '2023-05-12T00:00:00Z', description: 'Blue Adidas backpack with laptop and notebooks inside', reportedBy: 'John Doe', status: 'pending' },
-  { id: '2', type: 'found', itemName: 'Student ID Card', category: 'ID/Card', location: 'Cafeteria', date: '2023-05-11T00:00:00Z', description: 'Student ID card for Sarah Williams', reportedBy: 'Cafeteria Staff', status: 'claimed' },
-  { id: '3', type: 'lost', itemName: 'iPhone 13', category: 'Electronics', location: 'Lecture Hall B', date: '2023-05-10T00:00:00Z', description: 'Black iPhone 13 with blue case', reportedBy: 'Mike Johnson', status: 'pending' },
-  { id: '4', type: 'found', itemName: 'Red Umbrella', category: 'Accessories', location: 'Bus Stop', date: '2023-05-09T00:00:00Z', description: 'Red umbrella with wooden handle', reportedBy: 'Security Guard', status: 'pending' },
-  { id: '5', type: 'lost', itemName: 'Textbook - Physics', category: 'Books', location: 'Physics Lab', date: '2023-05-08T00:00:00Z', description: 'Physics textbook by Resnick Halliday', reportedBy: 'Alice Brown', status: 'resolved' },
-];
-
 const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLogout }) => {
-  const [items, setItems] = useState<LostFoundItem[]>(mockItems);
+  const [items, setItems] = useState<LostFoundItem[]>([]);
+  const [myItems, setMyItems] = useState<LostFoundItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'lost' | 'found'>('all');
   const [filterCategory, setFilterCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +36,35 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
     location: '',
     description: ''
   });
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Load approved items for public viewing
+      const approvedResult = await getApprovedLostFoundItems();
+      if (approvedResult.success) {
+        setItems(approvedResult.items);
+      }
+
+      // Load student's own items
+      if (user.studentId) {
+        const studentResult = await getStudentLostFoundItems(user.studentId);
+        if (studentResult.success) {
+          setMyItems(studentResult.items);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading lost & found data:', error);
+      setMessage('❌ Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -169,27 +182,58 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
     return matchesType && matchesCategory && matchesSearch;
   });
 
-  const handleReportItem = () => {
+  const handleReportItem = async () => {
     if (!newItem.itemName || !newItem.location || !newItem.description) {
-      alert('Please fill in all required fields');
+      setMessage('❌ Please fill in all required fields');
+      setTimeout(() => setMessage(''), 3000);
       return;
     }
 
-    const item: LostFoundItem = {
-      id: Date.now().toString(),
-      type: reportType,
-      itemName: newItem.itemName,
-      category: newItem.category,
-      location: newItem.location,
-      description: newItem.description,
-      date: new Date().toISOString(),
-      reportedBy: user.name,
-      status: 'pending'
-    };
+    if (!user.studentId) {
+      setMessage('❌ Student ID not found');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
 
-    setItems([item, ...items]);
-    setNewItem({ itemName: '', category: 'Electronics', location: '', description: '' });
-    setShowReportForm(false);
+    setSubmitting(true);
+    setMessage('');
+
+    try {
+      const itemData = {
+        type: reportType,
+        itemName: newItem.itemName,
+        category: newItem.category,
+        location: newItem.location,
+        description: newItem.description,
+        date: new Date().toISOString(),
+        reportedBy: user.name,
+        studentId: user.studentId,
+        studentEmail: user.email,
+        status: 'pending' as const
+      };
+
+      const result = await createLostFoundItem(itemData);
+
+      if (result.success) {
+        setMessage('✅ Item reported successfully! Awaiting admin approval.');
+        setNewItem({ itemName: '', category: 'Electronics', location: '', description: '' });
+        setShowReportForm(false);
+
+        // Refresh data
+        loadData();
+
+        setTimeout(() => setMessage(''), 5000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Error reporting item:', error);
+      setMessage('❌ Failed to report item. Please try again.');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -224,14 +268,29 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
       </header>
 
       <main style={mainContentStyle}>
+        {/* Message Display */}
+        {message && (
+          <div style={{
+            background: message.includes('✅') ? '#d1fae5' : '#fee2e2',
+            color: message.includes('✅') ? '#065f46' : '#dc2626',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            border: `1px solid ${message.includes('✅') ? '#a7f3d0' : '#fecaca'}`
+          }}>
+            {message}
+          </div>
+        )}
+
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
-              Lost & Found Items ({filteredItems.length})
+              Lost & Found Items ({loading ? '...' : filteredItems.length})
             </h2>
             <button
               style={buttonStyle}
               onClick={() => setShowReportForm(!showReportForm)}
+              disabled={submitting}
             >
               {showReportForm ? '✕ Cancel' : '+ Report Item'}
             </button>
@@ -304,12 +363,21 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
               />
               
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <button style={buttonStyle} onClick={handleReportItem}>
-                  📝 Submit Report
+                <button
+                  style={{
+                    ...buttonStyle,
+                    opacity: submitting ? 0.7 : 1,
+                    cursor: submitting ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={handleReportItem}
+                  disabled={submitting}
+                >
+                  {submitting ? '⏳ Submitting...' : '📝 Submit Report'}
                 </button>
                 <button
                   style={{ ...buttonStyle, background: '#6b7280' }}
                   onClick={() => setShowReportForm(false)}
+                  disabled={submitting}
                 >
                   Cancel
                 </button>
@@ -413,6 +481,75 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
             </div>
           )}
         </div>
+
+        {/* My Items Section */}
+        {myItems.length > 0 && (
+          <div style={{ ...cardStyle, marginTop: '2rem' }}>
+            <h2 style={{ margin: '0 0 1.5rem 0', color: '#333', fontSize: '1.5rem' }}>
+              My Reported Items ({myItems.length})
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+              {myItems.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    background: 'white',
+                    padding: '1.5rem',
+                    borderRadius: '12px',
+                    boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+                    border: '1px solid #e5e7eb',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div>
+                      <span style={typeBadgeStyle(item.type)}>
+                        {item.type.toUpperCase()}
+                      </span>
+                      <span style={{ ...statusBadgeStyle(item.status), marginLeft: '0.5rem' }}>
+                        {item.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                      {formatDate(item.date)}
+                    </span>
+                  </div>
+
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.1rem' }}>
+                    {item.itemName}
+                  </h3>
+
+                  <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                    <strong>Category:</strong> {item.category}
+                  </p>
+
+                  <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                    <strong>Location:</strong> {item.location}
+                  </p>
+
+                  <p style={{ margin: '0 0 1rem 0', color: '#4b5563', fontSize: '0.875rem' }}>
+                    {item.description}
+                  </p>
+
+                  {item.adminNotes && (
+                    <div style={{
+                      background: '#f3f4f6',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      marginTop: '1rem'
+                    }}>
+                      <p style={{ margin: '0', color: '#374151', fontSize: '0.875rem' }}>
+                        <strong>Admin Notes:</strong> {item.adminNotes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

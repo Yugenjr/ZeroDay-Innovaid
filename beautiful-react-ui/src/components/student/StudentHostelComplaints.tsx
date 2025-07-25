@@ -1,16 +1,6 @@
-import React, { useState } from 'react';
-
-interface HostelComplaint {
-  id: string;
-  type: string;
-  room: string;
-  hostelBlock: string;
-  description: string;
-  status: 'pending' | 'in-progress' | 'resolved';
-  date: string;
-  raisedBy: string;
-  priority: 'low' | 'medium' | 'high';
-}
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { createHostelComplaint, getStudentHostelComplaints, HostelComplaint } from '../../firebase/hostelComplaints';
 
 interface User {
   _id: string;
@@ -29,23 +19,12 @@ interface StudentHostelComplaintsProps {
   onLogout: () => void;
 }
 
-// Get shared hostel complaints from localStorage
-const getSharedComplaints = () => {
-  const stored = localStorage.getItem('hostelComplaints');
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  // Default complaints if none exist
-  return [
-    { id: '1', type: 'Plumbing', room: 'A-101', hostelBlock: 'A', description: 'Water leakage from bathroom sink', status: 'pending', date: '2023-05-12T00:00:00Z', raisedBy: 'John Doe', priority: 'high' },
-    { id: '2', type: 'Electrical', room: 'B-205', hostelBlock: 'B', description: 'Fan not working properly', status: 'in-progress', date: '2023-05-10T00:00:00Z', raisedBy: 'Mike Johnson', priority: 'medium' },
-    { id: '3', type: 'Cleaning', room: 'C-110', hostelBlock: 'C', description: 'Common area needs cleaning', status: 'resolved', date: '2023-05-08T00:00:00Z', raisedBy: 'David Brown', priority: 'low' },
-  ];
-};
-
 const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user, onBack, onLogout }) => {
   const [isHosteler, setIsHosteler] = useState<boolean | null>(null);
   const [complaints, setComplaints] = useState<HostelComplaint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
   
   const [showComplaintForm, setShowComplaintForm] = useState(false);
   const [newComplaint, setNewComplaint] = useState({
@@ -55,13 +34,31 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
     description: '',
     priority: 'medium' as 'low' | 'medium' | 'high'
   });
+
+  // Load data on component mount
+  useEffect(() => {
+    loadComplaints();
+  }, []);
+
+  const loadComplaints = async () => {
+    setLoading(true);
+    try {
+      if (user.studentId) {
+        const result = await getStudentHostelComplaints(user.studentId);
+        if (result.success) {
+          setComplaints(result.complaints);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading hostel complaints:', error);
+      setMessage('❌ Failed to load complaints');
+    } finally {
+      setLoading(false);
+    }
+  };
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Load complaints from localStorage on component mount
-  React.useEffect(() => {
-    const sharedComplaints = getSharedComplaints();
-    setComplaints(sharedComplaints);
-  }, []);
+  // This is now handled by the loadComplaints function in useEffect
 
   // Save complaints to localStorage whenever complaints change
   React.useEffect(() => {
@@ -182,33 +179,64 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
   // Filter complaints to show only current user's complaints
   const userComplaints = complaints.filter(complaint => complaint.raisedBy === user.name);
 
-  const handleSubmitComplaint = () => {
+  const handleSubmitComplaint = async () => {
     if (!newComplaint.room || !newComplaint.description) {
-      alert('Please fill in all required fields');
+      setMessage('❌ Please fill in all required fields');
+      setTimeout(() => setMessage(''), 3000);
       return;
     }
 
-    const complaint: HostelComplaint = {
-      id: Date.now().toString(),
-      type: newComplaint.type,
-      room: newComplaint.room,
-      hostelBlock: newComplaint.hostelBlock,
-      description: newComplaint.description,
-      priority: newComplaint.priority,
-      status: 'pending',
-      date: new Date().toISOString(),
-      raisedBy: user.name
-    };
+    if (!user.studentId) {
+      setMessage('❌ Student ID not found');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
 
-    const updatedComplaints = [complaint, ...complaints];
-    setComplaints(updatedComplaints);
-    localStorage.setItem('hostelComplaints', JSON.stringify(updatedComplaints));
-    setNewComplaint({ type: 'Plumbing', room: '', hostelBlock: 'A', description: '', priority: 'medium' });
-    setShowComplaintForm(false);
-    setSuccessMessage('✅ Complaint submitted successfully! Admin will review it soon.');
+    setSubmitting(true);
+    setMessage('');
 
-    // Clear success message after 5 seconds
-    setTimeout(() => setSuccessMessage(''), 5000);
+    try {
+      const complaintData = {
+        type: newComplaint.type,
+        room: newComplaint.room,
+        hostelBlock: newComplaint.hostelBlock,
+        description: newComplaint.description,
+        status: 'pending' as const,
+        date: new Date().toISOString(),
+        raisedBy: user.name,
+        studentId: user.studentId,
+        studentEmail: user.email,
+        priority: newComplaint.priority
+      };
+
+      const result = await createHostelComplaint(complaintData);
+
+      if (result.success) {
+        setMessage('✅ Complaint submitted successfully!');
+        setNewComplaint({
+          type: 'Plumbing',
+          room: '',
+          hostelBlock: 'A',
+          description: '',
+          priority: 'medium'
+        });
+        setShowComplaintForm(false);
+
+        // Refresh data
+        loadComplaints();
+
+        setTimeout(() => setMessage(''), 5000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Error submitting complaint:', error);
+      setMessage('❌ Failed to submit complaint. Please try again.');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
