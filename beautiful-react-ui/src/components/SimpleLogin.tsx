@@ -4,43 +4,77 @@ import { registerUser, loginUser, AppUser } from '../firebase/auth';
 import UserDashboard from './UserDashboard';
 import AdminDashboard from './AdminDashboard';
 
-interface LoginFormData {
-  name?: string;
+interface BaseFormData {
+  name: string;
   email: string;
   password: string;
   role: 'user' | 'admin';
+}
+
+interface StudentFormData extends BaseFormData {
+  role: 'user';
   studentId?: string;
   department?: string;
   year?: number;
   phone?: string;
 }
 
+interface AdminFormData extends BaseFormData {
+  role: 'admin';
+  department?: string;
+  phone?: string;
+}
+
+// Union type for form data (used in formData variable)
+type LoginFormData = StudentFormData | AdminFormData;
+
 
 
 const SimpleLogin: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<'user' | 'admin'>('user');
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState<LoginFormData>({
+
+  // Separate form states for admin and student
+  const [studentFormData, setStudentFormData] = useState<StudentFormData>({
     email: '',
     password: '',
-    role: 'user'
+    role: 'user',
+    name: '',
+    studentId: '',
+    department: '',
+    year: undefined,
+    phone: ''
   });
+
+  const [adminFormData, setAdminFormData] = useState<AdminFormData>({
+    email: '',
+    password: '',
+    role: 'admin',
+    name: '',
+    department: '',
+    phone: ''
+  });
+
+  // Get current form data based on selected role
+  const formData = selectedRole === 'user' ? studentFormData : adminFormData;
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
-  // Sync formData role with selectedRole
-  React.useEffect(() => {
-    setFormData(prev => ({ ...prev, role: selectedRole }));
-  }, [selectedRole]);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'year' ? parseInt(value) : value,
-      role: selectedRole
-    }));
+
+    if (selectedRole === 'user') {
+      setStudentFormData(prev => ({
+        ...prev,
+        [name]: name === 'year' ? parseInt(value) : value
+      }));
+    } else {
+      setAdminFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +88,17 @@ const SimpleLogin: React.FC = () => {
         const result = await loginUser(formData.email, formData.password);
 
         if (result.success && result.user) {
+          // Validate that the selected role matches the user's actual role
+          const userRole = result.user.role;
+          const selectedUserRole = selectedRole === 'user' ? 'user' : 'admin';
+
+          if (userRole !== selectedUserRole) {
+            const correctRoleText = userRole === 'user' ? 'Student' : 'Admin';
+            const selectedRoleText = selectedUserRole === 'user' ? 'Student' : 'Admin';
+            setMessage(`❌ Error: You are registered as a ${correctRoleText}, but trying to login as ${selectedRoleText}. Please select the correct role.`);
+            return;
+          }
+
           setMessage(`✅ Login successful! Welcome ${result.user.name}!`);
           localStorage.setItem('user', JSON.stringify(result.user));
           setCurrentUser(result.user);
@@ -62,19 +107,33 @@ const SimpleLogin: React.FC = () => {
         }
       } else {
         // Register with Firebase
-        if (!formData.name) {
+        if (!formData.name || formData.name.trim() === '') {
           setMessage('❌ Error: Name is required for registration');
           return;
         }
 
-        const userData = {
-          name: formData.name,
-          role: formData.role as 'user' | 'admin',
-          studentId: formData.studentId,
-          department: formData.department,
-          year: formData.year ? parseInt(formData.year.toString()) : undefined,
-          phone: formData.phone
-        };
+        // Handle different form types for registration
+        let userData;
+
+        if (selectedRole === 'user') {
+          const studentData = formData as StudentFormData;
+          userData = {
+            name: studentData.name,
+            role: 'user' as const,
+            studentId: studentData.studentId,
+            department: studentData.department,
+            year: studentData.year,
+            phone: studentData.phone
+          };
+        } else {
+          const adminData = formData as AdminFormData;
+          userData = {
+            name: adminData.name,
+            role: 'admin' as const,
+            department: adminData.department,
+            phone: adminData.phone
+          };
+        }
 
         const result = await registerUser(formData.email, formData.password, userData);
 
@@ -104,7 +163,25 @@ const SimpleLogin: React.FC = () => {
         localStorage.removeItem('user');
         setCurrentUser(null);
         setMessage('✅ Logged out successfully!');
-        setFormData({ email: '', password: '', role: selectedRole });
+        // Reset both form states
+        setStudentFormData({
+          email: '',
+          password: '',
+          role: 'user',
+          name: '',
+          studentId: '',
+          department: '',
+          year: undefined,
+          phone: ''
+        });
+        setAdminFormData({
+          email: '',
+          password: '',
+          role: 'admin',
+          name: '',
+          department: '',
+          phone: ''
+        });
       } else {
         setMessage(`❌ Logout error: ${result.message}`);
       }
@@ -114,12 +191,39 @@ const SimpleLogin: React.FC = () => {
       localStorage.removeItem('user');
       setCurrentUser(null);
       setMessage('✅ Logged out successfully!');
-      setFormData({ email: '', password: '', role: selectedRole });
+      // Reset both form states
+      setStudentFormData({
+        email: '',
+        password: '',
+        role: 'user',
+        name: '',
+        studentId: '',
+        department: '',
+        year: undefined,
+        phone: ''
+      });
+      setAdminFormData({
+        email: '',
+        password: '',
+        role: 'admin',
+        name: '',
+        department: '',
+        phone: ''
+      });
     }
   };
 
+
+
+  // TEMPORARILY DISABLED AUTO-LOGIN FOR TESTING LOGIN VALIDATION
   // Check if user is logged in on component mount and set up Firebase auth listener
   React.useEffect(() => {
+    // Clear any existing session to test login properly
+    localStorage.removeItem('user');
+    setCurrentUser(null);
+
+    // Commented out auto-login for testing
+    /*
     const setupAuthListener = async () => {
       try {
         // @ts-ignore
@@ -162,6 +266,7 @@ const SimpleLogin: React.FC = () => {
     };
 
     setupAuthListener();
+    */
   }, []);
 
   // If user is logged in, show appropriate dashboard
@@ -276,7 +381,7 @@ const SimpleLogin: React.FC = () => {
             style={roleButtonStyle(selectedRole === 'user')}
             onClick={() => {
               setSelectedRole('user');
-              setFormData({ ...formData, role: 'user' });
+              // Don't copy data between roles - keep forms completely separate
             }}
           >
             👨‍🎓 Student
@@ -285,7 +390,7 @@ const SimpleLogin: React.FC = () => {
             style={roleButtonStyle(selectedRole === 'admin')}
             onClick={() => {
               setSelectedRole('admin');
-              setFormData({ ...formData, role: 'admin' });
+              // Don't copy data between roles - keep forms completely separate
             }}
           >
             🛡️ Admin
@@ -332,7 +437,7 @@ const SimpleLogin: React.FC = () => {
                 type="text"
                 name="studentId"
                 placeholder="Student ID"
-                value={formData.studentId || ''}
+                value={(formData as StudentFormData).studentId || ''}
                 onChange={handleInputChange}
                 required
               />
@@ -348,7 +453,7 @@ const SimpleLogin: React.FC = () => {
               <select
                 style={inputStyle}
                 name="year"
-                value={formData.year || ''}
+                value={(formData as StudentFormData).year || ''}
                 onChange={handleInputChange}
                 required
               >
@@ -365,6 +470,29 @@ const SimpleLogin: React.FC = () => {
                 placeholder="Phone Number (Optional)"
                 value={formData.phone || ''}
                 onChange={handleInputChange}
+              />
+            </>
+          )}
+
+          {!isLogin && selectedRole === 'admin' && (
+            <>
+              <input
+                style={inputStyle}
+                type="text"
+                name="department"
+                placeholder="Department/Office (e.g., Administration)"
+                value={formData.department || ''}
+                onChange={handleInputChange}
+                required
+              />
+              <input
+                style={inputStyle}
+                type="tel"
+                name="phone"
+                placeholder="Phone Number"
+                value={formData.phone || ''}
+                onChange={handleInputChange}
+                required
               />
             </>
           )}
@@ -390,11 +518,31 @@ const SimpleLogin: React.FC = () => {
           onClick={() => {
             setIsLogin(!isLogin);
             setMessage('');
-            setFormData({ email: '', password: '', role: selectedRole });
+            // Clear both form states when toggling
+            setStudentFormData({
+              email: '',
+              password: '',
+              role: 'user',
+              name: '',
+              studentId: '',
+              department: '',
+              year: undefined,
+              phone: ''
+            });
+            setAdminFormData({
+              email: '',
+              password: '',
+              role: 'admin',
+              name: '',
+              department: '',
+              phone: ''
+            });
           }}
         >
           {isLogin ? "Don't have an account? Register here" : "Already have an account? Sign in"}
         </button>
+
+
 
         {message && <div style={messageStyle}>{message}</div>}
       </div>
