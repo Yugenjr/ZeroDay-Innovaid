@@ -1,17 +1,8 @@
 import React from 'react';
-import Button from './components/Button';
+import SimpleLogin from './components/SimpleLogin';
 
 const App: React.FC = () => {
-    const handleClick = () => {
-        alert('Button clicked!');
-    };
-
-    return (
-        <div style={{ textAlign: 'center', marginTop: '50px' }}>
-            <h1>Beautiful React UI</h1>
-            <Button label="Click Me" onClick={handleClick} />
-        </div>
-    );
+  return <SimpleLogin />;
 };
 
 export default App;

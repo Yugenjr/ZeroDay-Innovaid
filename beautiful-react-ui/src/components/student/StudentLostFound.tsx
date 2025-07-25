@@ -1,0 +1,421 @@
+import React, { useState } from 'react';
+
+interface LostFoundItem {
+  id: string;
+  type: 'lost' | 'found';
+  itemName: string;
+  category: string;
+  location: string;
+  date: string;
+  description: string;
+  reportedBy: string;
+  status: 'pending' | 'claimed' | 'resolved';
+  image?: string;
+}
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  studentId?: string;
+  department?: string;
+  year?: number;
+  phone?: string;
+}
+
+interface StudentLostFoundProps {
+  user: User;
+  onBack: () => void;
+  onLogout: () => void;
+}
+
+// Mock lost & found items
+const mockItems: LostFoundItem[] = [
+  { id: '1', type: 'lost', itemName: 'Blue Backpack', category: 'Bag', location: 'Main Library', date: '2023-05-12T00:00:00Z', description: 'Blue Adidas backpack with laptop and notebooks inside', reportedBy: 'John Doe', status: 'pending' },
+  { id: '2', type: 'found', itemName: 'Student ID Card', category: 'ID/Card', location: 'Cafeteria', date: '2023-05-11T00:00:00Z', description: 'Student ID card for Sarah Williams', reportedBy: 'Cafeteria Staff', status: 'claimed' },
+  { id: '3', type: 'lost', itemName: 'iPhone 13', category: 'Electronics', location: 'Lecture Hall B', date: '2023-05-10T00:00:00Z', description: 'Black iPhone 13 with blue case', reportedBy: 'Mike Johnson', status: 'pending' },
+  { id: '4', type: 'found', itemName: 'Red Umbrella', category: 'Accessories', location: 'Bus Stop', date: '2023-05-09T00:00:00Z', description: 'Red umbrella with wooden handle', reportedBy: 'Security Guard', status: 'pending' },
+  { id: '5', type: 'lost', itemName: 'Textbook - Physics', category: 'Books', location: 'Physics Lab', date: '2023-05-08T00:00:00Z', description: 'Physics textbook by Resnick Halliday', reportedBy: 'Alice Brown', status: 'resolved' },
+];
+
+const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLogout }) => {
+  const [items, setItems] = useState<LostFoundItem[]>(mockItems);
+  const [filterType, setFilterType] = useState<'all' | 'lost' | 'found'>('all');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportType, setReportType] = useState<'lost' | 'found'>('lost');
+  const [newItem, setNewItem] = useState({
+    itemName: '',
+    category: 'Electronics',
+    location: '',
+    description: ''
+  });
+
+  const containerStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    fontFamily: 'Arial, sans-serif'
+  };
+
+  const headerStyle: React.CSSProperties = {
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(10px)',
+    padding: '1rem 2rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+  };
+
+  const backButtonStyle: React.CSSProperties = {
+    background: '#667eea',
+    color: 'white',
+    border: 'none',
+    padding: '0.5rem 1rem',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    marginRight: '1rem'
+  };
+
+  const mainContentStyle: React.CSSProperties = {
+    padding: '2rem',
+    maxWidth: '1200px',
+    margin: '0 auto'
+  };
+
+  const cardStyle: React.CSSProperties = {
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '20px',
+    padding: '2rem',
+    marginBottom: '2rem',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    background: '#10b981',
+    color: 'white',
+    border: 'none',
+    padding: '0.75rem 1.5rem',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '1rem'
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.75rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '8px',
+    fontSize: '1rem',
+    marginBottom: '1rem'
+  };
+
+  const itemGridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+    gap: '1.5rem'
+  };
+
+  const itemCardStyle: React.CSSProperties = {
+    background: 'white',
+    borderRadius: '15px',
+    padding: '1.5rem',
+    boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+  };
+
+  const typeBadgeStyle = (type: string): React.CSSProperties => ({
+    background: type === 'lost' ? '#ef4444' : '#10b981',
+    color: 'white',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '20px',
+    fontSize: '0.75rem',
+    fontWeight: '600'
+  });
+
+  const statusBadgeStyle = (status: string): React.CSSProperties => {
+    const colors = {
+      'pending': '#f59e0b',
+      'claimed': '#10b981',
+      'resolved': '#6b7280'
+    };
+    
+    return {
+      background: colors[status as keyof typeof colors] || '#6b7280',
+      color: 'white',
+      padding: '0.25rem 0.75rem',
+      borderRadius: '20px',
+      fontSize: '0.75rem',
+      fontWeight: '600'
+    };
+  };
+
+  const categories = ['Electronics', 'Books', 'Bag', 'Accessories', 'ID/Card', 'Clothing', 'Other'];
+
+  const filteredItems = items.filter(item => {
+    const matchesType = filterType === 'all' || item.type === filterType;
+    const matchesCategory = !filterCategory || item.category === filterCategory;
+    const matchesSearch = !searchTerm || 
+      item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.location.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesType && matchesCategory && matchesSearch;
+  });
+
+  const handleReportItem = () => {
+    if (!newItem.itemName || !newItem.location || !newItem.description) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const item: LostFoundItem = {
+      id: Date.now().toString(),
+      type: reportType,
+      itemName: newItem.itemName,
+      category: newItem.category,
+      location: newItem.location,
+      description: newItem.description,
+      date: new Date().toISOString(),
+      reportedBy: user.name,
+      status: 'pending'
+    };
+
+    setItems([item, ...items]);
+    setNewItem({ itemName: '', category: 'Electronics', location: '', description: '' });
+    setShowReportForm(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <div style={containerStyle}>
+      <header style={headerStyle}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <button style={backButtonStyle} onClick={onBack}>
+            ← Back to Dashboard
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>
+            <span style={{ fontSize: '2rem' }}>🔍</span>
+            Lost & Found
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600' }}>
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+          <button style={{ background: '#ef4444', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }} onClick={onLogout}>
+            🚪 Logout
+          </button>
+        </div>
+      </header>
+
+      <main style={mainContentStyle}>
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
+              Lost & Found Items ({filteredItems.length})
+            </h2>
+            <button
+              style={buttonStyle}
+              onClick={() => setShowReportForm(!showReportForm)}
+            >
+              {showReportForm ? '✕ Cancel' : '+ Report Item'}
+            </button>
+          </div>
+
+          {showReportForm && (
+            <div style={{
+              background: '#f8fafc',
+              borderRadius: '15px',
+              padding: '2rem',
+              marginBottom: '2rem',
+              border: '2px solid #e2e8f0'
+            }}>
+              <h3 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>Report Lost/Found Item</h3>
+              
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <button
+                  style={{
+                    ...buttonStyle,
+                    background: reportType === 'lost' ? '#ef4444' : '#e2e8f0',
+                    color: reportType === 'lost' ? 'white' : '#333'
+                  }}
+                  onClick={() => setReportType('lost')}
+                >
+                  📢 I Lost Something
+                </button>
+                <button
+                  style={{
+                    ...buttonStyle,
+                    background: reportType === 'found' ? '#10b981' : '#e2e8f0',
+                    color: reportType === 'found' ? 'white' : '#333'
+                  }}
+                  onClick={() => setReportType('found')}
+                >
+                  🎯 I Found Something
+                </button>
+              </div>
+              
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Item Name *"
+                value={newItem.itemName}
+                onChange={(e) => setNewItem({ ...newItem, itemName: e.target.value })}
+              />
+              
+              <select
+                style={inputStyle}
+                value={newItem.category}
+                onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Location *"
+                value={newItem.location}
+                onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
+              />
+              
+              <textarea
+                style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' as const }}
+                placeholder="Description *"
+                value={newItem.description}
+                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+              />
+              
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button style={buttonStyle} onClick={handleReportItem}>
+                  📝 Submit Report
+                </button>
+                <button
+                  style={{ ...buttonStyle, background: '#6b7280' }}
+                  onClick={() => setShowReportForm(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: '2rem' }}>
+            <input
+              style={inputStyle}
+              type="text"
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <select
+                style={{ padding: '0.75rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '1rem' }}
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as 'all' | 'lost' | 'found')}
+              >
+                <option value="all">All Items</option>
+                <option value="lost">Lost Items</option>
+                <option value="found">Found Items</option>
+              </select>
+              
+              <select
+                style={{ padding: '0.75rem', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '1rem' }}
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+              >
+                <option value="">All Categories</option>
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={itemGridStyle}>
+            {filteredItems.map(item => (
+              <div
+                key={item.id}
+                style={itemCardStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div>
+                    <span style={typeBadgeStyle(item.type)}>
+                      {item.type.toUpperCase()}
+                    </span>
+                    <span style={{ ...statusBadgeStyle(item.status), marginLeft: '0.5rem' }}>
+                      {item.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                    {formatDate(item.date)}
+                  </span>
+                </div>
+                
+                <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.1rem' }}>
+                  {item.itemName}
+                </h3>
+                
+                <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                  <strong>Category:</strong> {item.category}
+                </p>
+                
+                <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                  <strong>Location:</strong> {item.location}
+                </p>
+                
+                <p style={{ margin: '0 0 1rem 0', color: '#4b5563', fontSize: '0.875rem' }}>
+                  {item.description}
+                </p>
+                
+                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.875rem' }}>
+                  <strong>Reported by:</strong> {item.reportedBy}
+                </p>
+              </div>
+            ))}
+          </div>
+          
+          {filteredItems.length === 0 && (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem',
+              color: '#6b7280'
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+              <h3 style={{ margin: '0 0 0.5rem 0' }}>No items found</h3>
+              <p style={{ margin: 0 }}>No items match your search criteria.</p>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default StudentLostFound;
