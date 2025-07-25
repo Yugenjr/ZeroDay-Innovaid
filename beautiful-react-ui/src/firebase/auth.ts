@@ -7,9 +7,11 @@ import {
   User
 } from 'firebase/auth';
 // @ts-ignore
-import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, orderBy } from 'firebase/firestore';
 // @ts-ignore
-import { auth, db } from './config';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+// @ts-ignore
+import { auth, db, storage } from './config';
 
 // User interface for our application
 export interface AppUser {
@@ -196,5 +198,350 @@ export const getCurrentUserData = async (user: User): Promise<AppUser | null> =>
   } catch (error) {
     console.error('Error getting user data:', error);
     return null;
+  }
+};
+
+// Event Registration Interfaces and Functions
+export interface EventRegistration {
+  id?: string;
+  eventId: string;
+  eventTitle: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  department?: string;
+  year?: number;
+  phone?: string;
+  registrationDate: Date;
+  status: 'registered' | 'cancelled';
+  additionalInfo?: string;
+  attachments?: {
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize: number;
+    uploadDate: Date;
+  }[];
+}
+
+// File upload function for event registrations
+export const uploadRegistrationFiles = async (
+  files: File[],
+  studentId: string,
+  eventId: string
+): Promise<{
+  success: boolean;
+  attachments?: {
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize: number;
+    uploadDate: Date;
+  }[];
+  message?: string;
+}> => {
+  try {
+    console.log('uploadRegistrationFiles called with:', { filesCount: files.length, studentId, eventId });
+    const attachments = [];
+
+    for (const file of files) {
+      console.log('Processing file:', { name: file.name, size: file.size, type: file.type });
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        console.log('File too large:', file.name);
+        return {
+          success: false,
+          message: `File "${file.name}" is too large. Maximum size is 10MB.`
+        };
+      }
+
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+
+      console.log('Checking file type:', file.type);
+      if (!allowedTypes.includes(file.type)) {
+        console.log('File type not allowed:', file.type);
+        return {
+          success: false,
+          message: `File type "${file.type}" is not allowed. Please upload PDF, DOC, DOCX, or image files.`
+        };
+      }
+
+      // Create unique filename
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+      const filePath = `event-registrations/${studentId}/${eventId}/${fileName}`;
+      console.log('Uploading file to path:', filePath);
+
+      // Upload file to Firebase Storage
+      const storageRef = ref(storage, filePath);
+      console.log('Storage ref created, uploading...');
+      const snapshot = await uploadBytes(storageRef, file);
+      console.log('File uploaded, getting download URL...');
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log('Download URL obtained:', downloadURL);
+
+      attachments.push({
+        fileName: file.name,
+        fileUrl: downloadURL,
+        fileType: file.type,
+        fileSize: file.size,
+        uploadDate: new Date()
+      });
+    }
+
+    return {
+      success: true,
+      attachments
+    };
+  } catch (error: any) {
+    console.error('File upload error:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to upload files'
+    };
+  }
+};
+
+// Register student for an event
+export const registerForEvent = async (
+  eventId: string,
+  eventTitle: string,
+  studentData: {
+    studentId: string;
+    studentName: string;
+    studentEmail: string;
+    department?: string;
+    year?: number;
+    phone?: string;
+    additionalInfo?: string;
+  },
+  files?: File[]
+) => {
+  try {
+    console.log('registerForEvent called with:', { eventId, eventTitle, studentData, filesCount: files?.length });
+
+    // Check if student is already registered for this event
+    console.log('Checking for existing registrations...');
+    const registrationsRef = collection(db, 'eventRegistrations');
+    const existingQuery = query(
+      registrationsRef,
+      where('eventId', '==', eventId),
+      where('studentId', '==', studentData.studentId),
+      where('status', '==', 'registered')
+    );
+    const existingRegistrations = await getDocs(existingQuery);
+    console.log('Existing registrations check completed');
+
+    if (!existingRegistrations.empty) {
+      console.log('Student already registered');
+      return {
+        success: false,
+        message: 'You are already registered for this event'
+      };
+    }
+
+    // Handle file uploads if provided
+    console.log('Handling file uploads...');
+    let attachments = undefined;
+    if (files && files.length > 0) {
+      console.log('Uploading files:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+      const uploadResult = await uploadRegistrationFiles(files, studentData.studentId, eventId);
+      console.log('Upload result:', uploadResult);
+      if (!uploadResult.success) {
+        console.log('File upload failed:', uploadResult.message);
+        return {
+          success: false,
+          message: uploadResult.message || 'Failed to upload files'
+        };
+      }
+      attachments = uploadResult.attachments;
+    } else {
+      console.log('No files to upload');
+    }
+
+    // Create registration document
+    console.log('Creating registration document...');
+    const registrationData: EventRegistration = {
+      eventId,
+      eventTitle,
+      studentId: studentData.studentId,
+      studentName: studentData.studentName,
+      studentEmail: studentData.studentEmail,
+      department: studentData.department,
+      year: studentData.year,
+      phone: studentData.phone,
+      registrationDate: new Date(),
+      status: 'registered',
+      additionalInfo: studentData.additionalInfo,
+      attachments
+    };
+
+    console.log('Registration data:', registrationData);
+    const docRef = await addDoc(registrationsRef, registrationData);
+    console.log('Document created with ID:', docRef.id);
+
+    // Update registration count in Realtime Database
+    try {
+      // Import the function dynamically to avoid circular imports
+      const { updateEventRegistrationCount } = await import('./announcements');
+      await updateEventRegistrationCount(eventId, true);
+    } catch (countError) {
+      console.warn('Failed to update registration count:', countError);
+      // Don't fail the registration if count update fails
+    }
+
+    return {
+      success: true,
+      message: 'Successfully registered for the event!',
+      registrationId: docRef.id
+    };
+  } catch (error: any) {
+    console.error('Event registration error:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to register for event'
+    };
+  }
+};
+
+// Get all registrations for a specific event (for admins)
+export const getEventRegistrations = async (eventId?: string) => {
+  try {
+    const registrationsRef = collection(db, 'eventRegistrations');
+    let q;
+
+    if (eventId) {
+      q = query(
+        registrationsRef,
+        where('eventId', '==', eventId),
+        where('status', '==', 'registered'),
+        orderBy('registrationDate', 'desc')
+      );
+    } else {
+      q = query(
+        registrationsRef,
+        where('status', '==', 'registered'),
+        orderBy('registrationDate', 'desc')
+      );
+    }
+
+    const querySnapshot = await getDocs(q);
+    const registrations: EventRegistration[] = [];
+
+    querySnapshot.forEach((doc) => {
+      registrations.push({
+        id: doc.id,
+        ...doc.data()
+      } as EventRegistration);
+    });
+
+    return {
+      success: true,
+      registrations
+    };
+  } catch (error: any) {
+    console.error('Error getting event registrations:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to get registrations',
+      registrations: []
+    };
+  }
+};
+
+// Get registrations for a specific student
+export const getStudentRegistrations = async (studentId: string) => {
+  try {
+    const registrationsRef = collection(db, 'eventRegistrations');
+    const q = query(
+      registrationsRef,
+      where('studentId', '==', studentId),
+      where('status', '==', 'registered'),
+      orderBy('registrationDate', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const registrations: EventRegistration[] = [];
+
+    querySnapshot.forEach((doc) => {
+      registrations.push({
+        id: doc.id,
+        ...doc.data()
+      } as EventRegistration);
+    });
+
+    return {
+      success: true,
+      registrations
+    };
+  } catch (error: any) {
+    console.error('Error getting student registrations:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to get student registrations',
+      registrations: []
+    };
+  }
+};
+
+// Cancel event registration
+export const cancelEventRegistration = async (registrationId: string) => {
+  try {
+    // Get registration data first to access file URLs
+    const registrationRef = doc(db, 'eventRegistrations', registrationId);
+    const registrationDoc = await getDoc(registrationRef);
+
+    if (registrationDoc.exists()) {
+      const registrationData = registrationDoc.data() as EventRegistration;
+
+      // Delete associated files from storage
+      if (registrationData.attachments && registrationData.attachments.length > 0) {
+        for (const attachment of registrationData.attachments) {
+          try {
+            const fileRef = ref(storage, attachment.fileUrl);
+            await deleteObject(fileRef);
+          } catch (fileError) {
+            console.warn('Failed to delete file:', attachment.fileName, fileError);
+            // Continue with cancellation even if file deletion fails
+          }
+        }
+      }
+    }
+
+    // Update registration status
+    await setDoc(registrationRef, { status: 'cancelled' }, { merge: true });
+
+    // Update registration count in Realtime Database
+    if (registrationDoc.exists()) {
+      const registrationData = registrationDoc.data() as EventRegistration;
+      try {
+        // Import the function dynamically to avoid circular imports
+        const { updateEventRegistrationCount } = await import('./announcements');
+        await updateEventRegistrationCount(registrationData.eventId, false);
+      } catch (countError) {
+        console.warn('Failed to update registration count:', countError);
+        // Don't fail the cancellation if count update fails
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Registration cancelled successfully'
+    };
+  } catch (error: any) {
+    console.error('Error cancelling registration:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to cancel registration'
+    };
   }
 };

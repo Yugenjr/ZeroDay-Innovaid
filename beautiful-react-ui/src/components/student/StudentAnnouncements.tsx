@@ -1,13 +1,8 @@
-import React, { useState } from 'react';
-
-interface Announcement {
-  id: string;
-  title: string;
-  category: string;
-  date: string;
-  content: string;
-  author: string;
-}
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { registerForEvent } from '../../firebase/registrations';
+// @ts-ignore
+import { subscribeToAnnouncements, Announcement } from '../../firebase/announcements';
 
 interface User {
   _id: string;
@@ -26,21 +21,35 @@ interface StudentAnnouncementsProps {
   onLogout: () => void;
 }
 
-// Mock announcements data
-const mockAnnouncements: Announcement[] = [
-  { id: '1', title: 'Mid-Term Exam Schedule Released', category: 'Academic', date: '2023-05-15T00:00:00Z', content: 'Mid-term examinations will be held from May 20-25. Check department notice boards for detailed schedules. All students must carry their ID cards and admit cards to the examination hall.', author: 'Academic Office' },
-  { id: '2', title: 'Annual Cultural Fest - TechFiesta 2024', category: 'Event', date: '2023-05-14T00:00:00Z', content: 'The annual cultural fest will be held on June 5-7. Registration for performances starts next week. Prizes worth ₹50,000 to be won! Categories include dance, music, drama, and technical events.', author: 'Cultural Committee' },
-  { id: '3', title: 'Library Renovation Notice', category: 'Facility', date: '2023-05-13T00:00:00Z', content: 'The main library will be closed for renovations from May 15-18. Alternative study spaces will be available in Block B, Level 2. Digital resources remain accessible 24/7.', author: 'Facility Management' },
-  { id: '4', title: 'Summer Internship Opportunities', category: 'Academic', date: '2023-05-12T00:00:00Z', content: 'Leading tech companies are offering summer internships. Application deadline: May 30th. Visit the placement cell for more details and application procedures.', author: 'Placement Cell' },
-  { id: '5', title: 'Campus WiFi Maintenance', category: 'Facility', date: '2023-05-11T00:00:00Z', content: 'WiFi services will be temporarily unavailable on May 16th from 2 AM to 6 AM for scheduled maintenance. Mobile hotspots will be available at the IT help desk.', author: 'IT Department' },
-  { id: '6', title: 'Blood Donation Camp', category: 'Event', date: '2023-05-10T00:00:00Z', content: 'NSS is organizing a blood donation camp on May 18th in the main auditorium from 9 AM to 4 PM. All healthy students above 18 are encouraged to participate.', author: 'NSS Committee' },
-  { id: '7', title: 'Holiday Notice - Gandhi Jayanti', category: 'General', date: '2023-05-09T00:00:00Z', content: 'The college will remain closed on October 2nd (Gandhi Jayanti). Classes will resume on October 3rd as per regular schedule.', author: 'Administration' },
-  { id: '8', title: 'New Course Registration Open', category: 'Academic', date: '2023-05-08T00:00:00Z', content: 'Registration for elective courses for the next semester is now open. Students can register through the student portal until May 25th. Limited seats available.', author: 'Academic Office' }
-];
+
 
 const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBack, onLogout }) => {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Announcement | null>(null);
+  const [additionalInfo, setAdditionalInfo] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationMessage, setRegistrationMessage] = useState('');
+
+  // Subscribe to real-time announcements
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = subscribeToAnnouncements((announcementsData) => {
+      setAnnouncements(announcementsData);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -124,12 +133,12 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
 
   const categories = ['Academic', 'Event', 'Facility', 'Emergency', 'General'];
 
-  const filteredAnnouncements = mockAnnouncements.filter(announcement => {
+  const filteredAnnouncements = announcements.filter((announcement: Announcement) => {
     const matchesCategory = !selectedCategory || announcement.category === selectedCategory;
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       announcement.content.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesCategory && matchesSearch;
   });
 
@@ -152,6 +161,116 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
       const diffInDays = Math.floor(diffInHours / 24);
       return `${diffInDays} days ago`;
     }
+  };
+
+  // Registration handlers
+  const handleRegisterClick = (announcement: Announcement) => {
+    if (announcement.category === 'Event') {
+      setSelectedEvent(announcement);
+      setShowRegistrationModal(true);
+      setRegistrationMessage('');
+      // Reset form
+      setAdditionalInfo('');
+      setSelectedFiles([]);
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      setSelectedFiles(fileArray);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleRegistrationSubmit = async () => {
+    console.log('Registration submit started');
+
+    if (!selectedEvent || !selectedEvent.id || !user.studentId) {
+      console.log('Missing required information:', { selectedEvent, user });
+      setRegistrationMessage('❌ Missing required information');
+      return;
+    }
+
+    setIsRegistering(true);
+    setRegistrationMessage('');
+
+    try {
+      console.log('Calling registerForEvent with:', {
+        eventId: selectedEvent.id,
+        eventTitle: selectedEvent.title,
+        studentData: {
+          studentId: user.studentId,
+          studentName: user.name,
+          studentEmail: user.email,
+          department: user.department,
+          year: user.year,
+          phone: user.phone,
+          additionalInfo: additionalInfo
+        },
+        filesCount: selectedFiles.length
+      });
+
+      const result = await registerForEvent(
+        selectedEvent.id,
+        selectedEvent.title,
+        {
+          studentId: user.studentId,
+          studentName: user.name,
+          studentEmail: user.email,
+          department: user.department,
+          year: user.year,
+          phone: user.phone,
+          additionalInfo: additionalInfo
+        },
+        selectedFiles.length > 0 ? selectedFiles : undefined
+      );
+
+      console.log('Registration result:', result);
+
+      if (result.success) {
+        setRegistrationMessage(`✅ ${result.message}`);
+
+        // Refresh announcements to get updated registration count
+        // The subscription will automatically update the state
+
+        setTimeout(() => {
+          setShowRegistrationModal(false);
+          setSelectedEvent(null);
+          setAdditionalInfo('');
+          setSelectedFiles([]);
+          setRegistrationMessage('');
+        }, 2000);
+      } else {
+        setRegistrationMessage(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setRegistrationMessage(`❌ Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      console.log('Setting isRegistering to false');
+      setIsRegistering(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowRegistrationModal(false);
+    setSelectedEvent(null);
+    setAdditionalInfo('');
+    setSelectedFiles([]);
+    setRegistrationMessage('');
   };
 
   return (
@@ -207,7 +326,7 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                 }}
                 onClick={() => setSelectedCategory('')}
               >
-                All ({mockAnnouncements.length})
+                All ({announcements.length})
               </button>
               {categories.map(category => (
                 <button
@@ -224,14 +343,42 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                   }}
                   onClick={() => setSelectedCategory(category)}
                 >
-                  {category} ({mockAnnouncements.filter(a => a.category === category).length})
+                  {category} ({announcements.filter((a: Announcement) => a.category === category).length})
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            {filteredAnnouncements.map(announcement => (
+            {loading ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem',
+                color: '#6b7280'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>Loading announcements...</h3>
+                <p style={{ margin: 0 }}>Please wait while we fetch the latest updates.</p>
+              </div>
+            ) : filteredAnnouncements.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem',
+                color: '#6b7280'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📢</div>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>No announcements found</h3>
+                <p style={{ margin: 0 }}>
+                  {selectedCategory
+                    ? `No announcements in the ${selectedCategory} category match your search.`
+                    : announcements.length === 0
+                      ? 'No announcements have been posted yet.'
+                      : 'No announcements match your search criteria.'
+                  }
+                </p>
+              </div>
+            ) : (
+              filteredAnnouncements.map(announcement => (
               <div
                 key={announcement.id}
                 style={announcementCardStyle}
@@ -265,33 +412,346 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                     <div style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
                       {getTimeAgo(announcement.date)}
                     </div>
+                    {announcement.createdAt && (
+                      <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '2px' }}>
+                        Created: {new Date(announcement.createdAt).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <p style={{ margin: 0, color: '#4b5563', lineHeight: '1.6' }}>
+                <p style={{ margin: '0 0 1rem 0', color: '#4b5563', lineHeight: '1.6' }}>
                   {announcement.content}
                 </p>
+
+                {/* Event details and registration for events */}
+                {announcement.category === 'Event' && (
+                  <div style={{ marginTop: '1rem' }}>
+                    {/* Event details */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '0.75rem',
+                      marginBottom: '1rem',
+                      padding: '1rem',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem'
+                    }}>
+                      {announcement.eventDate && (
+                        <div><strong>📅 Event Date:</strong> {new Date(announcement.eventDate).toLocaleDateString()}</div>
+                      )}
+                      {announcement.eventLocation && (
+                        <div><strong>📍 Location:</strong> {announcement.eventLocation}</div>
+                      )}
+                      {announcement.registrationDeadline && (
+                        <div><strong>⏰ Registration Deadline:</strong> {new Date(announcement.registrationDeadline).toLocaleDateString()}</div>
+                      )}
+                      <div>
+                        <strong>👥 Registrations:</strong>
+                        <span style={{
+                          color: announcement.maxRegistrations && (announcement.registrationCount || 0) >= announcement.maxRegistrations ? '#dc2626' : '#059669',
+                          fontWeight: 'bold',
+                          marginLeft: '4px'
+                        }}>
+                          {announcement.registrationCount || 0}
+                          {announcement.maxRegistrations && ` / ${announcement.maxRegistrations}`}
+                        </span>
+                        {announcement.maxRegistrations && (announcement.registrationCount || 0) >= announcement.maxRegistrations && (
+                          <span style={{ color: '#dc2626', fontSize: '0.75rem', marginLeft: '8px' }}>
+                            (Full)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Registration button */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      {announcement.maxRegistrations && (announcement.registrationCount || 0) >= announcement.maxRegistrations ? (
+                        <button
+                          style={{
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '8px',
+                            cursor: 'not-allowed',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            opacity: 0.7
+                          }}
+                          disabled
+                        >
+                          🚫 Registration Full
+                        </button>
+                      ) : announcement.registrationDeadline && new Date(announcement.registrationDeadline) < new Date() ? (
+                        <button
+                          style={{
+                            background: '#f59e0b',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '8px',
+                            cursor: 'not-allowed',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            opacity: 0.7
+                          }}
+                          disabled
+                        >
+                          ⏰ Registration Closed
+                        </button>
+                      ) : (
+                        <button
+                          style={{
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onClick={() => handleRegisterClick(announcement)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#059669';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#10b981';
+                          }}
+                        >
+                          📝 Register for Event
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-            
-            {filteredAnnouncements.length === 0 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '3rem',
-                color: '#6b7280'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📢</div>
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>No announcements found</h3>
-                <p style={{ margin: 0 }}>
-                  {selectedCategory 
-                    ? `No announcements in the ${selectedCategory} category match your search.`
-                    : 'No announcements match your search criteria.'
-                  }
-                </p>
-              </div>
+              ))
             )}
           </div>
         </div>
       </main>
+
+      {/* Registration Modal */}
+      {showRegistrationModal && selectedEvent && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '15px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
+                📝 Register for Event
+              </h2>
+              <button
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '0.25rem'
+                }}
+                onClick={handleCloseModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.125rem' }}>
+                {selectedEvent.title}
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                <span style={categoryBadgeStyle(selectedEvent.category)}>
+                  {selectedEvent.category}
+                </span>
+                <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  By {selectedEvent.author}
+                </span>
+              </div>
+              <p style={{ margin: 0, color: '#4b5563', fontSize: '0.875rem' }}>
+                {selectedEvent.content}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Your Information:</h4>
+              <div style={{ display: 'grid', gap: '0.75rem', fontSize: '0.875rem' }}>
+                <div><strong>Name:</strong> {user.name}</div>
+                <div><strong>Email:</strong> {user.email}</div>
+                <div><strong>Student ID:</strong> {user.studentId}</div>
+                {user.department && <div><strong>Department:</strong> {user.department}</div>}
+                {user.year && <div><strong>Year:</strong> {user.year}</div>}
+                {user.phone && <div><strong>Phone:</strong> {user.phone}</div>}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: '600' }}>
+                Additional Information (Optional):
+              </label>
+              <textarea
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  resize: 'vertical',
+                  minHeight: '80px',
+                  fontFamily: 'inherit'
+                }}
+                placeholder="Any additional information or special requirements..."
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+              />
+            </div>
+
+            {/* File Upload Section */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: '600' }}>
+                📎 Attach Files (Optional):
+              </label>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                Supported: PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
+              </div>
+
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={handleFileSelect}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px dashed #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  backgroundColor: '#f8fafc'
+                }}
+              />
+
+              {/* Display selected files */}
+              {selectedFiles.length > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#333' }}>
+                    Selected Files ({selectedFiles.length}):
+                  </div>
+                  {selectedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.5rem',
+                        backgroundColor: '#f1f5f9',
+                        borderRadius: '6px',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: '600', color: '#333' }}>{file.name}</div>
+                        <div style={{ color: '#6b7280' }}>
+                          {formatFileSize(file.size)} • {file.type}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(index)}
+                        style={{
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '0.25rem 0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {registrationMessage && (
+              <div style={{
+                padding: '0.75rem',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                backgroundColor: registrationMessage.includes('✅') ? '#f0fdf4' : '#fef2f2',
+                color: registrationMessage.includes('✅') ? '#166534' : '#dc2626',
+                fontSize: '0.875rem'
+              }}>
+                {registrationMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                style={{
+                  background: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+                onClick={handleCloseModal}
+                disabled={isRegistering}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  background: isRegistering ? '#9ca3af' : '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: isRegistering ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+                onClick={handleRegistrationSubmit}
+                disabled={isRegistering}
+              >
+                {isRegistering ? '⏳ Registering...' : '📝 Register'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

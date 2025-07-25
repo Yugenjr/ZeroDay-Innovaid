@@ -1,13 +1,6 @@
-import React, { useState } from 'react';
-
-interface Announcement {
-  id: string;
-  title: string;
-  category: string;
-  date: string;
-  content: string;
-  author: string;
-}
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { subscribeToAnnouncements, createAnnouncement, deleteAnnouncement, addSampleAnnouncements, Announcement } from '../../firebase/announcements';
 
 interface User {
   _id: string;
@@ -20,18 +13,41 @@ interface AnnouncementManagementProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
-  announcements: Announcement[];
 }
 
-const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ user, onBack, onLogout, announcements: initialAnnouncements }) => {
-  const [announcements, setAnnouncements] = useState(initialAnnouncements);
+const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ user, onBack, onLogout }) => {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
     category: 'Academic',
-    content: ''
+    content: '',
+    author: user.name,
+    maxRegistrations: '',
+    registrationDeadline: '',
+    eventLocation: '',
+    eventDate: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Subscribe to real-time announcements
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = subscribeToAnnouncements((announcementsData) => {
+      setAnnouncements(announcementsData);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -136,29 +152,104 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ user, o
     ? announcements.filter(ann => ann.category === selectedCategory)
     : announcements;
 
-  const handleCreateAnnouncement = () => {
+  const handleCreateAnnouncement = async () => {
     if (!newAnnouncement.title || !newAnnouncement.content) {
-      alert('Please fill in all required fields');
+      setMessage('❌ Please fill in all required fields');
       return;
     }
 
-    const announcement: Announcement = {
-      id: Date.now().toString(),
-      title: newAnnouncement.title,
-      category: newAnnouncement.category,
-      content: newAnnouncement.content,
-      date: new Date().toISOString(),
-      author: user.name
-    };
+    setIsSubmitting(true);
+    setMessage('');
 
-    setAnnouncements([announcement, ...announcements]);
-    setNewAnnouncement({ title: '', category: 'Academic', content: '' });
-    setShowCreateForm(false);
+    try {
+      const announcementData: any = {
+        title: newAnnouncement.title,
+        category: newAnnouncement.category,
+        content: newAnnouncement.content,
+        date: new Date().toISOString(),
+        author: user.name
+      };
+
+      // Add event-specific fields if it's an event
+      if (newAnnouncement.category === 'Event') {
+        announcementData.registrationCount = 0;
+        if (newAnnouncement.maxRegistrations) {
+          announcementData.maxRegistrations = parseInt(newAnnouncement.maxRegistrations);
+        }
+        if (newAnnouncement.registrationDeadline) {
+          announcementData.registrationDeadline = new Date(newAnnouncement.registrationDeadline).toISOString();
+        }
+        if (newAnnouncement.eventLocation) {
+          announcementData.eventLocation = newAnnouncement.eventLocation;
+        }
+        if (newAnnouncement.eventDate) {
+          announcementData.eventDate = new Date(newAnnouncement.eventDate).toISOString();
+        }
+      }
+
+      const result = await createAnnouncement(announcementData);
+
+      if (result.success) {
+        setMessage('✅ Announcement published successfully!');
+        setNewAnnouncement({
+          title: '',
+          category: 'Academic',
+          content: '',
+          author: user.name,
+          maxRegistrations: '',
+          registrationDeadline: '',
+          eventLocation: '',
+          eventDate: ''
+        });
+        setShowCreateForm(false);
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      setMessage('❌ Failed to publish announcement. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteAnnouncement = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this announcement?')) {
-      setAnnouncements(announcements.filter(ann => ann.id !== id));
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this announcement?')) {
+      return;
+    }
+
+    try {
+      const result = await deleteAnnouncement(id);
+      if (result.success) {
+        setMessage('✅ Announcement deleted successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      setMessage('❌ Failed to delete announcement. Please try again.');
+    }
+  };
+
+  const handleAddSampleData = async () => {
+    setIsSubmitting(true);
+    setMessage('');
+
+    try {
+      const result = await addSampleAnnouncements();
+      if (result.success) {
+        setMessage('✅ Sample announcements added successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error adding sample data:', error);
+      setMessage('❌ Failed to add sample data. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -243,14 +334,96 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ user, o
                 value={newAnnouncement.content}
                 onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
               />
-              
+
+              {/* Event-specific fields */}
+              {newAnnouncement.category === 'Event' && (
+                <div style={{
+                  padding: '1.5rem',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  border: '1px solid #e0f2fe'
+                }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#0369a1', fontSize: '1rem' }}>
+                    🎭 Event Details
+                  </h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <input
+                      style={inputStyle}
+                      type="number"
+                      placeholder="Max Registrations (optional)"
+                      value={newAnnouncement.maxRegistrations}
+                      onChange={(e) => setNewAnnouncement({ ...newAnnouncement, maxRegistrations: e.target.value })}
+                    />
+                    <input
+                      style={inputStyle}
+                      type="text"
+                      placeholder="Event Location (optional)"
+                      value={newAnnouncement.eventLocation}
+                      onChange={(e) => setNewAnnouncement({ ...newAnnouncement, eventLocation: e.target.value })}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#374151' }}>
+                        Registration Deadline:
+                      </label>
+                      <input
+                        style={inputStyle}
+                        type="datetime-local"
+                        value={newAnnouncement.registrationDeadline}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, registrationDeadline: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#374151' }}>
+                        Event Date:
+                      </label>
+                      <input
+                        style={inputStyle}
+                        type="datetime-local"
+                        value={newAnnouncement.eventDate}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, eventDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {message && (
+                <div style={{
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  backgroundColor: message.includes('✅') ? '#f0fdf4' : '#fef2f2',
+                  color: message.includes('✅') ? '#166534' : '#dc2626',
+                  fontSize: '0.875rem'
+                }}>
+                  {message}
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <button style={buttonStyle} onClick={handleCreateAnnouncement}>
-                  📢 Publish Announcement
+                <button
+                  style={{
+                    ...buttonStyle,
+                    backgroundColor: isSubmitting ? '#9ca3af' : (buttonStyle.background as string),
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={handleCreateAnnouncement}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '⏳ Publishing...' : '📢 Publish Announcement'}
                 </button>
                 <button
                   style={{ ...buttonStyle, background: '#6b7280' }}
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setMessage('');
+                  }}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
@@ -290,7 +463,52 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ user, o
           </div>
 
           <div>
-            {filteredAnnouncements.map(announcement => (
+            {loading ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem',
+                color: '#6b7280'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>Loading announcements...</h3>
+                <p style={{ margin: 0 }}>Please wait while we fetch the latest announcements.</p>
+              </div>
+            ) : filteredAnnouncements.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem',
+                color: '#6b7280'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📢</div>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>No announcements found</h3>
+                <p style={{ margin: '0 0 1.5rem 0' }}>
+                  {selectedCategory
+                    ? `No announcements in the ${selectedCategory} category.`
+                    : 'No announcements have been created yet. Create your first announcement above!'
+                  }
+                </p>
+                {!selectedCategory && announcements.length === 0 && (
+                  <button
+                    style={{
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      opacity: isSubmitting ? 0.6 : 1
+                    }}
+                    onClick={handleAddSampleData}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? '⏳ Adding...' : '📝 Add Sample Announcements'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredAnnouncements.map((announcement: Announcement) => (
               <div key={announcement.id} style={announcementCardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
@@ -316,32 +534,77 @@ const AnnouncementManagement: React.FC<AnnouncementManagementProps> = ({ user, o
                       cursor: 'pointer',
                       fontSize: '0.875rem'
                     }}
-                    onClick={() => handleDeleteAnnouncement(announcement.id)}
+                    onClick={() => announcement.id && handleDeleteAnnouncement(announcement.id)}
                   >
                     🗑️
                   </button>
                 </div>
-                <p style={{ margin: 0, color: '#4b5563', lineHeight: '1.6' }}>
+                <p style={{ margin: '0 0 1rem 0', color: '#4b5563', lineHeight: '1.6' }}>
                   {announcement.content}
                 </p>
+
+                {/* Event details for admin */}
+                {announcement.category === 'Event' && (
+                  <div style={{
+                    backgroundColor: '#f0f9ff',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    marginTop: '1rem',
+                    border: '1px solid #e0f2fe'
+                  }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#0369a1', fontSize: '0.875rem', fontWeight: '600' }}>
+                      📊 Event Statistics & Details
+                    </h4>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '0.75rem',
+                      fontSize: '0.75rem'
+                    }}>
+                      <div style={{
+                        background: '#10b981',
+                        color: 'white',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        textAlign: 'center',
+                        fontWeight: '600'
+                      }}>
+                        👥 {announcement.registrationCount || 0} Registered
+                        {announcement.maxRegistrations && ` / ${announcement.maxRegistrations}`}
+                      </div>
+
+                      {announcement.eventDate && (
+                        <div><strong>📅 Event:</strong> {new Date(announcement.eventDate).toLocaleDateString()}</div>
+                      )}
+
+                      {announcement.eventLocation && (
+                        <div><strong>📍 Location:</strong> {announcement.eventLocation}</div>
+                      )}
+
+                      {announcement.registrationDeadline && (
+                        <div><strong>⏰ Deadline:</strong> {new Date(announcement.registrationDeadline).toLocaleDateString()}</div>
+                      )}
+                    </div>
+
+                    {announcement.maxRegistrations && (announcement.registrationCount || 0) >= announcement.maxRegistrations && (
+                      <div style={{
+                        marginTop: '0.75rem',
+                        padding: '0.5rem',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                      }}>
+                        🚫 Registration Full
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-            
-            {filteredAnnouncements.length === 0 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '3rem',
-                color: '#6b7280'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📢</div>
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>No announcements found</h3>
-                <p style={{ margin: 0 }}>
-                  {selectedCategory 
-                    ? `No announcements in the ${selectedCategory} category.`
-                    : 'Create your first announcement to get started!'
-                  }
-                </p>
-              </div>
+              ))
             )}
           </div>
         </div>

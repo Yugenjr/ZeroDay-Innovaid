@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types/User';
 import StudentManagement from './admin/StudentManagement';
 import AnnouncementManagement from './admin/AnnouncementManagement';
 import LostFoundManagement from './admin/LostFoundManagement';
 import TimetableManagement from './admin/TimetableManagement';
 import HostelManagement from './admin/HostelManagement';
+import RegistrationManagement from './admin/RegistrationManagement';
+// @ts-ignore
+import { getAllRegistrations } from '../firebase/registrations';
 
 interface AdminDashboardProps {
   user: User;
@@ -20,12 +23,7 @@ const mockStudents = [
   { id: '5', name: 'David Brown', email: 'david@college.edu', studentId: 'CE2024001', department: 'Civil Engineering', year: 3, isActive: true, lastLogin: '2023-05-12T16:30:00Z' },
 ];
 
-// Mock announcements data
-const mockAnnouncements = [
-  { id: '1', title: 'Mid-Term Exam Schedule', category: 'Academic', date: '2023-05-10T00:00:00Z', content: 'Mid-term examinations will be held from May 20-25. Check department notice boards for detailed schedules.', author: 'Academic Office' },
-  { id: '2', title: 'Annual Cultural Fest', category: 'Event', date: '2023-05-08T00:00:00Z', content: 'The annual cultural fest will be held on June 5-7. Registration for performances starts next week.', author: 'Cultural Committee' },
-  { id: '3', title: 'Campus Maintenance', category: 'Facility', date: '2023-05-05T00:00:00Z', content: 'The main library will be closed for renovations from May 15-18. Alternative study spaces will be available in Block B.', author: 'Facility Management' },
-];
+
 
 // Mock lost & found items
 const mockLostFoundItems = [
@@ -50,14 +48,35 @@ const getSharedComplaints = () => {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState<number>(0);
   const [complaints, setComplaints] = useState(getSharedComplaints());
 
-  // Update complaints when returning to dashboard
+  // Update complaints and registrations when returning to dashboard
   React.useEffect(() => {
     if (!activeSection) {
       setComplaints(getSharedComplaints());
+      loadPendingRegistrationsCount(); // Refresh registration count
     }
   }, [activeSection]);
+
+  // Load pending registrations count
+  const loadPendingRegistrationsCount = async () => {
+    try {
+      const result = await getAllRegistrations();
+      if (result.success && result.registrations) {
+        const pendingCount = result.registrations.filter(reg => reg.status === 'pending').length;
+        setPendingRegistrationsCount(pendingCount);
+        console.log('📊 Pending registrations count:', pendingCount);
+      }
+    } catch (error) {
+      console.error('Error loading pending registrations count:', error);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadPendingRegistrationsCount();
+  }, []);
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -220,6 +239,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       key: 'events'
     },
     {
+      icon: '📝',
+      title: 'Event Registrations',
+      description: 'View and manage student registrations for campus events.',
+      key: 'eventRegistrations',
+      badge: pendingRegistrationsCount
+    },
+    {
       icon: '🏢',
       title: 'Facility Management',
       description: 'Manage campus facilities, room bookings, and maintenance schedules.',
@@ -235,6 +261,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   // Handle section navigation
   const handleSectionClick = (sectionKey: string) => {
+    console.log('🔍 Admin clicked section:', sectionKey);
     setActiveSection(sectionKey);
   };
 
@@ -244,17 +271,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   // Render specific management section
   if (activeSection) {
+    console.log('🎯 Rendering section:', activeSection);
     switch (activeSection) {
       case 'students':
         return <StudentManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} students={mockStudents} />;
       case 'announcements':
-        return <AnnouncementManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} announcements={mockAnnouncements} />;
+        return <AnnouncementManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'lostfound':
         return <LostFoundManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} items={mockLostFoundItems} />;
       case 'timetable':
         return <TimetableManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'hostel':
         return <HostelManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} complaints={getSharedComplaints()} />;
+      case 'eventRegistrations':
+        console.log('📝 Loading Registration Management component');
+        return <RegistrationManagement user={user} onBack={handleBackToDashboard} />;
       default:
         return <div>Feature coming soon!</div>;
     }
