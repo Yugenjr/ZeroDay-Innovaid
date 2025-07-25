@@ -1,5 +1,8 @@
-import { io, Socket } from 'socket.io-client';
+// import { io, Socket } from 'socket.io-client';
 import { LostFoundItem } from './lostFoundService';
+
+// Temporary mock for Socket type
+type Socket = any;
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
@@ -21,6 +24,11 @@ class SocketService {
 
   // Initialize socket connection
   connect(userId?: string, isAdmin = false): void {
+    // Temporarily disabled socket connection
+    console.log('Socket connection temporarily disabled');
+    return;
+
+    /*
     if (this.socket?.connected) {
       return;
     }
@@ -29,6 +37,7 @@ class SocketService {
       transports: ['websocket', 'polling'],
       timeout: 20000,
     });
+    */
 
     this.socket.on('connect', () => {
       console.log('Socket connected:', this.socket?.id);
