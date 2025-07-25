@@ -5,23 +5,19 @@ import AnnouncementManagement from './admin/AnnouncementManagement';
 import LostFoundManagement from './admin/LostFoundManagement';
 import TimetableManagement from './admin/TimetableManagement';
 import HostelManagement from './admin/HostelManagement';
+
 import RegistrationManagement from './admin/RegistrationManagement';
+import AdminTechEvents from './admin/AdminTechEvents';
 // @ts-ignore
 import { getAllRegistrations } from '../firebase/registrations';
+import { getAllStudents, AppUser, subscribeToStudents } from '../firebase/auth';
 
 interface AdminDashboardProps {
   user: User;
   onLogout: () => void;
 }
 
-// Mock student data for demonstration
-const mockStudents = [
-  { id: '1', name: 'John Doe', email: 'john@college.edu', studentId: 'CS2024001', department: 'Computer Science', year: 3, isActive: true, lastLogin: '2023-05-15T10:30:00Z' },
-  { id: '2', name: 'Jane Smith', email: 'jane@college.edu', studentId: 'CS2024002', department: 'Computer Science', year: 2, isActive: true, lastLogin: '2023-05-14T14:20:00Z' },
-  { id: '3', name: 'Mike Johnson', email: 'mike@college.edu', studentId: 'EE2024001', department: 'Electrical Engineering', year: 4, isActive: true, lastLogin: '2023-05-13T09:15:00Z' },
-  { id: '4', name: 'Sarah Williams', email: 'sarah@college.edu', studentId: 'ME2024001', department: 'Mechanical Engineering', year: 1, isActive: false, lastLogin: '2023-04-28T11:45:00Z' },
-  { id: '5', name: 'David Brown', email: 'david@college.edu', studentId: 'CE2024001', department: 'Civil Engineering', year: 3, isActive: true, lastLogin: '2023-05-12T16:30:00Z' },
-];
+
 
 
 
@@ -50,6 +46,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState<number>(0);
   const [complaints, setComplaints] = useState(getSharedComplaints());
+  const [students, setStudents] = useState<AppUser[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [studentsListener, setStudentsListener] = useState<(() => void) | null>(null);
 
   // Update complaints and registrations when returning to dashboard
   React.useEffect(() => {
@@ -64,7 +63,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     try {
       const result = await getAllRegistrations();
       if (result.success && result.registrations) {
-        const pendingCount = result.registrations.filter(reg => reg.status === 'pending').length;
+        const pendingCount = result.registrations.filter((reg: any) => reg.status === 'pending').length;
         setPendingRegistrationsCount(pendingCount);
         console.log('📊 Pending registrations count:', pendingCount);
       }
@@ -77,6 +76,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   useEffect(() => {
     loadPendingRegistrationsCount();
   }, []);
+
+  // Cleanup listeners when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log('🧹 AdminDashboard: Component unmounting, cleaning up listeners');
+      cleanupStudentsListener();
+    };
+  }, [studentsListener]);
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -232,40 +239,92 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       description: 'Oversee book inventory, reservations, and library resource allocation.',
       key: 'library'
     },
+
     {
-      icon: '🎭',
-      title: 'Event Management',
-      description: 'Create, manage, and monitor campus events, workshops, and activities.',
-      key: 'events'
-    },
-    {
-      icon: '📝',
+      icon: '�',
       title: 'Event Registrations',
       description: 'View and manage student registrations for campus events.',
       key: 'eventRegistrations',
       badge: pendingRegistrationsCount
     },
     {
-      icon: '🏢',
-      title: 'Facility Management',
-      description: 'Manage campus facilities, room bookings, and maintenance schedules.',
-      key: 'facilities'
-    },
-    {
-      icon: '📊',
-      title: 'Analytics & Reports',
-      description: 'View detailed analytics, usage statistics, and generate reports.',
-      key: 'analytics'
+      icon: '�🚀',
+      title: 'Tech Events Management',
+      description: 'Create and manage hackathons, internships, tech news, and opportunities with email notifications.',
+      key: 'techevents'
     }
   ];
+
+  // Set up real-time listener for students
+  const setupStudentsListener = () => {
+    console.log('🔄 AdminDashboard: Setting up real-time students listener...');
+    setLoadingStudents(true);
+
+    // Clean up existing listener if any
+    if (studentsListener) {
+      console.log('🧹 Cleaning up existing listener');
+      studentsListener();
+      setStudentsListener(null);
+    }
+
+    // Clear current students to show loading state
+    setStudents([]);
+
+    // Set up new real-time listener
+    const unsubscribe = subscribeToStudents((studentsData) => {
+      console.log('📊 AdminDashboard: Received real-time students update');
+      console.log(`📊 Previous student count: ${students.length}`);
+      console.log(`📊 New student count: ${studentsData.length}`);
+      console.log('📊 Previous students:', students.map(s => s.name).join(', '));
+      console.log('📊 New students:', studentsData.map(s => s.name).join(', '));
+
+      setStudents(studentsData);
+      setLoadingStudents(false);
+      console.log(`✅ AdminDashboard: Updated state with ${studentsData.length} students`);
+    });
+
+    setStudentsListener(() => unsubscribe);
+    console.log('🎯 AdminDashboard: Real-time listener set up successfully');
+  };
+
+  // Force refresh students data
+  const forceRefreshStudents = () => {
+    console.log('🔄 AdminDashboard: Force refreshing students...');
+    cleanupStudentsListener();
+    setupStudentsListener();
+  };
+
+  // Clean up listener when component unmounts or section changes
+  const cleanupStudentsListener = () => {
+    if (studentsListener) {
+      console.log('🧹 AdminDashboard: Cleaning up students listener');
+      studentsListener();
+      setStudentsListener(null);
+    }
+  };
 
   // Handle section navigation
   const handleSectionClick = (sectionKey: string) => {
     console.log('🔍 Admin clicked section:', sectionKey);
+
+    // Clean up existing listeners when switching sections
+    if (activeSection === 'students' && sectionKey !== 'students') {
+      cleanupStudentsListener();
+    }
+
     setActiveSection(sectionKey);
+
+    // Set up real-time listener when accessing student management
+    if (sectionKey === 'students') {
+      setupStudentsListener();
+    }
   };
 
   const handleBackToDashboard = () => {
+    // Clean up listeners when going back to dashboard
+    if (activeSection === 'students') {
+      cleanupStudentsListener();
+    }
     setActiveSection(null);
   };
 
@@ -274,7 +333,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     console.log('🎯 Rendering section:', activeSection);
     switch (activeSection) {
       case 'students':
-        return <StudentManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} students={mockStudents} />;
+        return <StudentManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} students={students} loading={loadingStudents} onRefresh={forceRefreshStudents} />;
       case 'announcements':
         return <AnnouncementManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'lostfound':
@@ -283,9 +342,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         return <TimetableManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'hostel':
         return <HostelManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} complaints={getSharedComplaints()} />;
+
       case 'eventRegistrations':
         console.log('📝 Loading Registration Management component');
         return <RegistrationManagement user={user} onBack={handleBackToDashboard} />;
+      case 'techevents':
+        return <AdminTechEvents user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       default:
         return <div>Feature coming soon!</div>;
     }

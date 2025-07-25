@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
-
-interface Student {
-  id: string;
-  name: string;
-  email: string;
-  studentId: string;
-  department: string;
-  year: number;
-  isActive: boolean;
-  lastLogin: string;
-}
+import { AppUser } from '../../firebase/auth';
 
 interface User {
   _id: string;
@@ -22,14 +12,24 @@ interface StudentManagementProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
-  students: Student[];
+  students: AppUser[];
+  loading?: boolean;
+  onRefresh?: () => void;
 }
 
-const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onLogout, students }) => {
+const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onLogout, students, loading = false, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterYear, setFilterYear] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<AppUser | null>(null);
+
+  // Debug logging - track prop changes
+  React.useEffect(() => {
+    console.log('🎯 StudentManagement: Props updated!');
+    console.log(`📊 Student count: ${students.length}`);
+    console.log(`⏳ Loading: ${loading}`);
+    console.log('👥 Students:', students.map(s => `${s.name} (${s.email})`).join(', '));
+  }, [students, loading]);
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -110,14 +110,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onL
     borderBottom: '1px solid #e2e8f0'
   };
 
-  const statusBadgeStyle = (isActive: boolean): React.CSSProperties => ({
-    padding: '0.25rem 0.75rem',
-    borderRadius: '20px',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    background: isActive ? '#10b981' : '#ef4444',
-    color: 'white'
-  });
+
 
   const actionButtonStyle: React.CSSProperties = {
     padding: '0.5rem 1rem',
@@ -133,33 +126,18 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onL
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+                         (student.studentId && student.studentId.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesDepartment = !filterDepartment || student.department === filterDepartment;
-    const matchesYear = !filterYear || student.year.toString() === filterYear;
-    
+    const matchesYear = !filterYear || (student.year && student.year.toString() === filterYear);
+
     return matchesSearch && matchesDepartment && matchesYear;
   });
 
-  const departments = [...new Set(students.map(s => s.department))];
-  const years = [...new Set(students.map(s => s.year.toString()))];
+  const departments = [...new Set(students.map(s => s.department).filter(Boolean))];
+  const years = [...new Set(students.map(s => s.year).filter(Boolean).map(y => y!.toString()))];
 
-  const handleToggleStatus = (studentId: string) => {
-    // In real app, this would make an API call
-    console.log(`Toggle status for student ${studentId}`);
-  };
-
-  const handleViewDetails = (student: Student) => {
+  const handleViewDetails = (student: AppUser) => {
     setSelectedStudent(student);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
@@ -187,9 +165,28 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onL
 
       <main style={mainContentStyle}>
         <div style={cardStyle}>
-          <h2 style={{ margin: '0 0 1.5rem 0', color: '#333', fontSize: '1.5rem' }}>
-            Student Database ({filteredStudents.length} students)
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ margin: '0', color: '#333', fontSize: '1.5rem' }}>
+              Student Database ({filteredStudents.length} students)
+            </h2>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                style={{
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.875rem'
+                }}
+              >
+                🔄 Refresh Data
+              </button>
+            )}
+          </div>
           
           <div style={filterStyle}>
             <input
@@ -230,41 +227,58 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onL
                   <th style={thStyle}>Email</th>
                   <th style={thStyle}>Department</th>
                   <th style={thStyle}>Year</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Last Login</th>
+                  <th style={thStyle}>Role</th>
+                  <th style={thStyle}>Joined</th>
                   <th style={thStyle}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.map(student => (
-                  <tr key={student.id}>
-                    <td style={tdStyle}>{student.studentId}</td>
-                    <td style={tdStyle}>{student.name}</td>
-                    <td style={tdStyle}>{student.email}</td>
-                    <td style={tdStyle}>{student.department}</td>
-                    <td style={tdStyle}>Year {student.year}</td>
-                    <td style={tdStyle}>
-                      <span style={statusBadgeStyle(student.isActive)}>
-                        {student.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>{formatDate(student.lastLogin)}</td>
-                    <td style={tdStyle}>
-                      <button
-                        style={{ ...actionButtonStyle, background: '#3b82f6', color: 'white' }}
-                        onClick={() => handleViewDetails(student)}
-                      >
-                        View
-                      </button>
-                      <button
-                        style={{ ...actionButtonStyle, background: student.isActive ? '#ef4444' : '#10b981', color: 'white' }}
-                        onClick={() => handleToggleStatus(student.id)}
-                      >
-                        {student.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', padding: '2rem' }}>
+                      <div style={{ color: '#666' }}>Loading students...</div>
                     </td>
                   </tr>
-                ))}
+                ) : filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', padding: '2rem' }}>
+                      <div style={{ color: '#666' }}>
+                        {students.length === 0 ? 'No students registered yet.' : 'No students match your search criteria.'}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map(student => (
+                    <tr key={student.uid}>
+                      <td style={tdStyle}>{student.studentId || 'N/A'}</td>
+                      <td style={tdStyle}>{student.name}</td>
+                      <td style={tdStyle}>{student.email}</td>
+                      <td style={tdStyle}>{student.department || 'N/A'}</td>
+                      <td style={tdStyle}>{student.year ? `Year ${student.year}` : 'N/A'}</td>
+                      <td style={tdStyle}>
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          background: student.role === 'admin' ? '#fef3c7' : '#dbeafe',
+                          color: student.role === 'admin' ? '#92400e' : '#1e40af'
+                        }}>
+                          {student.role === 'admin' ? 'Admin' : 'Student'}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>{student.createdAt.toLocaleDateString()}</td>
+                      <td style={tdStyle}>
+                        <button
+                          style={{ ...actionButtonStyle, background: '#3b82f6', color: 'white' }}
+                          onClick={() => handleViewDetails(student)}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -297,25 +311,36 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ user, onBack, onL
                 <strong>Name:</strong> {selectedStudent.name}
               </div>
               <div style={{ marginBottom: '1rem' }}>
-                <strong>Student ID:</strong> {selectedStudent.studentId}
+                <strong>Student ID:</strong> {selectedStudent.studentId || 'Not provided'}
               </div>
               <div style={{ marginBottom: '1rem' }}>
                 <strong>Email:</strong> {selectedStudent.email}
               </div>
               <div style={{ marginBottom: '1rem' }}>
-                <strong>Department:</strong> {selectedStudent.department}
+                <strong>Department:</strong> {selectedStudent.department || 'Not specified'}
               </div>
               <div style={{ marginBottom: '1rem' }}>
-                <strong>Year:</strong> {selectedStudent.year}
+                <strong>Year:</strong> {selectedStudent.year || 'Not specified'}
               </div>
               <div style={{ marginBottom: '1rem' }}>
-                <strong>Status:</strong> 
-                <span style={statusBadgeStyle(selectedStudent.isActive)}>
-                  {selectedStudent.isActive ? 'Active' : 'Inactive'}
+                <strong>Role:</strong>
+                <span style={{
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '12px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  background: selectedStudent.role === 'admin' ? '#fef3c7' : '#dbeafe',
+                  color: selectedStudent.role === 'admin' ? '#92400e' : '#1e40af',
+                  marginLeft: '0.5rem'
+                }}>
+                  {selectedStudent.role === 'admin' ? 'Admin' : 'Student'}
                 </span>
               </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <strong>Phone:</strong> {selectedStudent.phone || 'Not provided'}
+              </div>
               <div style={{ marginBottom: '2rem' }}>
-                <strong>Last Login:</strong> {formatDate(selectedStudent.lastLogin)}
+                <strong>Joined:</strong> {selectedStudent.createdAt.toLocaleDateString()}
               </div>
               <button
                 style={{ ...actionButtonStyle, background: '#6b7280', color: 'white', width: '100%' }}

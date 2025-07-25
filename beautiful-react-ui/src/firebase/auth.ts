@@ -7,7 +7,7 @@ import {
   User
 } from 'firebase/auth';
 // @ts-ignore
-import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, orderBy } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, orderBy, onSnapshot } from 'firebase/firestore';
 // @ts-ignore
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 // @ts-ignore
@@ -76,12 +76,16 @@ export const registerUser = async (
   }
 ) => {
   try {
+    console.log('🔄 Starting user registration process...');
+    console.log(`👤 Registering: ${userData.name} (${email}) as ${userData.role}`);
+
     // First, clean up any orphaned data for this email
     await cleanupOrphanedUserData(email);
 
     // Create user with email and password
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    console.log(`✅ Firebase Auth user created: ${user.uid}`);
 
     // Update the user's display name
     await updateProfile(user, {
@@ -109,6 +113,11 @@ export const registerUser = async (
     }
 
     await setDoc(doc(db, 'users', user.uid), userDoc);
+    console.log(`✅ User document created in Firestore for ${userData.name}`);
+
+    if (userData.role === 'user') {
+      console.log(`🎓 New student registered: ${userData.name} - Will appear in Admin Student Management`);
+    }
 
     return {
       success: true,
@@ -544,4 +553,145 @@ export const cancelEventRegistration = async (registrationId: string) => {
       message: error.message || 'Failed to cancel registration'
     };
   }
+};
+
+// Get all users from the database (for admin use)
+export const getAllUsers = async (): Promise<AppUser[]> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+
+    const users: AppUser[] = [];
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data();
+      users.push({
+        uid: doc.id,
+        _id: doc.id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        studentId: userData.studentId,
+        department: userData.department,
+        year: userData.year,
+        phone: userData.phone,
+        createdAt: userData.createdAt?.toDate() || new Date()
+      });
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    return [];
+  }
+};
+
+// Get all students (users with role 'user')
+export const getAllStudents = async (): Promise<AppUser[]> => {
+  try {
+    console.log('🔍 Fetching all students from database...');
+    const usersRef = collection(db, 'users');
+
+    // First, try to get all users and filter client-side to avoid indexing issues
+    const querySnapshot = await getDocs(usersRef);
+    console.log(`📊 Found ${querySnapshot.size} total users in database`);
+
+    const students: AppUser[] = [];
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data();
+      console.log(`👤 Processing user: ${userData.name} (${userData.email}) - Role: ${userData.role}`);
+
+      // Filter for students (role === 'user')
+      if (userData.role === 'user') {
+        students.push({
+          uid: doc.id,
+          _id: doc.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          studentId: userData.studentId,
+          department: userData.department,
+          year: userData.year,
+          phone: userData.phone,
+          createdAt: userData.createdAt?.toDate() || new Date()
+        });
+        console.log(`✅ Added student: ${userData.name}`);
+      }
+    });
+
+    console.log(`🎯 Total students found: ${students.length}`);
+
+    // Sort by creation date (newest first)
+    students.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return students;
+  } catch (error) {
+    console.error('❌ Error getting all students:', error);
+    return [];
+  }
+};
+
+// Real-time listener for students (users with role 'user')
+export const subscribeToStudents = (callback: (students: AppUser[]) => void): (() => void) => {
+  console.log('🔄 Setting up real-time listener for students...');
+
+  const usersRef = collection(db, 'users');
+
+  // Set up real-time listener
+  const unsubscribe = onSnapshot(usersRef, (querySnapshot) => {
+    console.log('🔔 Real-time update received from Firebase');
+    console.log(`📊 Total users in database: ${querySnapshot.size}`);
+
+    // Track changes for debugging
+    querySnapshot.docChanges().forEach((change) => {
+      const userData = change.doc.data();
+      if (change.type === 'added') {
+        console.log(`➕ Document added: ${userData.name} (${userData.email})`);
+      } else if (change.type === 'modified') {
+        console.log(`✏️ Document modified: ${userData.name} (${userData.email})`);
+      } else if (change.type === 'removed') {
+        console.log(`🗑️ Document removed: ${userData.name} (${userData.email})`);
+      }
+    });
+
+    const students: AppUser[] = [];
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data();
+      console.log(`👤 Processing user: ${userData.name} (${userData.email}) - Role: ${userData.role}`);
+
+      // Filter for students (role === 'user')
+      if (userData.role === 'user') {
+        students.push({
+          uid: doc.id,
+          _id: doc.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          studentId: userData.studentId,
+          department: userData.department,
+          year: userData.year,
+          phone: userData.phone,
+          createdAt: userData.createdAt?.toDate() || new Date()
+        });
+        console.log(`✅ Added student to list: ${userData.name}`);
+      } else {
+        console.log(`⏭️ Skipped non-student: ${userData.name} (Role: ${userData.role})`);
+      }
+    });
+
+    console.log(`🎯 Final student list: ${students.length} students`);
+    console.log('📋 Student names:', students.map(s => s.name).join(', '));
+
+    // Sort by creation date (newest first)
+    students.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Call the callback with updated students
+    console.log('📤 Sending updated student list to component');
+    callback(students);
+  }, (error) => {
+    console.error('❌ Error in real-time listener:', error);
+    callback([]);
+  });
+
+  return unsubscribe;
 };

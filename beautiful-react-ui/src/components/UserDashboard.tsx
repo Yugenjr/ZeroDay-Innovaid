@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types/User';
 import StudentAnnouncements from './student/StudentAnnouncements';
 import StudentLostFound from './student/StudentLostFound';
 import StudentTimetable from './student/StudentTimetable';
 import StudentHostelComplaints from './student/StudentHostelComplaints';
 import SkillExchange from './student/SkillExchange';
+import TechUpdates from './student/TechUpdates';
+import {
+  Notification,
+  subscribeToNotifications,
+  getRecentNotifications,
+  initializeNotificationSystem
+} from '../firebase/notifications';
 
 
 
@@ -18,11 +25,48 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ subject: '', message: '' });
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
-  const [notifications] = useState([
-    { id: 1, message: 'New assignment posted in Data Structures', time: '2 hours ago', read: false },
-    { id: 2, message: 'Library book due tomorrow', time: '1 day ago', read: false },
-    { id: 3, message: 'Hostel maintenance scheduled', time: '2 days ago', read: true }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  // Initialize notification system and subscribe to real-time updates
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupNotifications = async () => {
+      try {
+        // Initialize notification system (request permissions, etc.)
+        unsubscribe = await initializeNotificationSystem(user.uid);
+
+        // Subscribe to real-time notifications
+        const notificationUnsubscribe = subscribeToNotifications(user.uid, (newNotifications) => {
+          setNotifications(newNotifications.slice(0, 5)); // Show latest 5 notifications
+          setNotificationCount(newNotifications.filter(n => !n.isRead).length);
+        });
+
+        // Store the unsubscribe function
+        unsubscribe = notificationUnsubscribe;
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
+        // Fallback to getting recent notifications without real-time updates
+        try {
+          const recentNotifications = await getRecentNotifications(user.uid, 5);
+          setNotifications(recentNotifications);
+          setNotificationCount(recentNotifications.filter(n => !n.isRead).length);
+        } catch (fallbackError) {
+          console.error('Error getting recent notifications:', fallbackError);
+        }
+      }
+    };
+
+    setupNotifications();
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user.uid]);
 
 
 
@@ -159,16 +203,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
       key: 'library'
     },
     {
-      icon: '🎭',
-      title: 'Campus Events',
-      description: 'Campus events, workshops, seminars, and activity registrations.',
-      key: 'events'
-    },
-    {
-      icon: '🗺️',
-      title: 'Campus Navigation',
-      description: 'Interactive campus maps, room finder, and facility locations.',
-      key: 'navigation'
+      icon: '�',
+      title: 'Tech Updates',
+      description: 'Curated hackathons, internships, tech news, and opportunities to stay competitive.',
+      key: 'techupdates'
     }
   ];
 
@@ -194,6 +232,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         return <StudentHostelComplaints user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'skillexchange':
         return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+      case 'techupdates':
+        return <TechUpdates user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'profile':
         return (
           <div style={containerStyle}>
@@ -471,17 +511,17 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                           width: '12px',
                           height: '12px',
                           borderRadius: '50%',
-                          background: notification.read ? '#ccc' : '#ef4444',
+                          background: notification.isRead ? '#ccc' : '#ef4444',
                           marginTop: '0.25rem',
                           flexShrink: 0,
-                          boxShadow: notification.read ? 'none' : '0 0 10px rgba(239, 68, 68, 0.5)'
+                          boxShadow: notification.isRead ? 'none' : '0 0 10px rgba(239, 68, 68, 0.5)'
                         }} />
                         <div style={{ flex: 1 }}>
                           <p style={{
                             margin: '0 0 0.5rem 0',
                             fontSize: '1rem',
                             color: isDarkMode ? '#fff' : '#333',
-                            fontWeight: notification.read ? '400' : '600',
+                            fontWeight: notification.isRead ? '400' : '600',
                             lineHeight: '1.5'
                           }}>
                             {notification.message}
@@ -491,7 +531,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                             fontSize: '0.85rem',
                             color: isDarkMode ? '#aaa' : '#888'
                           }}>
-                            {notification.time}
+                            {notification.createdAt.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
                           </p>
                         </div>
                       </div>
@@ -697,7 +742,19 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   }
 
   return (
-    <div style={containerStyle}>
+    <>
+      {/* Add CSS animation for notification badge */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+          }
+        `}
+      </style>
+
+      <div style={containerStyle}>
       <header style={headerStyle}>
         <div style={logoStyle}>
           <span style={{ fontSize: '2rem' }}>🎓</span>
@@ -705,8 +762,36 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         </div>
 
         <div style={userInfoStyle}>
+          {/* Notification Badge */}
+          {notificationCount > 0 && (
+            <div style={{
+              position: 'relative',
+              marginRight: '0.5rem'
+            }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: '#ef4444',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                animation: notificationCount > 0 ? 'pulse 2s infinite' : 'none'
+              }}>
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </div>
+            </div>
+          )}
+
           <div
-            style={avatarStyle}
+            style={{
+              ...avatarStyle,
+              position: 'relative'
+            }}
             onClick={() => handleSectionClick('profile')}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'scale(1.1)';
@@ -758,7 +843,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
             fontSize: '1.1rem', 
             marginBottom: '1.5rem' 
           }}>
-            Here's what's happening on campus today. Explore our services to make the most of your college experience.
+            Welcome to your student dashboard. Explore our services to make the most of your college experience.
           </p>
           
           <div style={{ 
@@ -776,14 +861,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
               <h3 style={{ color: '#0369a1', margin: '0 0 0.5rem 0' }}>12</h3>
               <p style={{ color: '#0369a1', margin: 0, fontSize: '0.9rem' }}>Books Reserved</p>
             </div>
-            <div style={{ 
-              background: '#f0fdf4', 
-              padding: '1rem', 
+            <div style={{
+              background: '#f0fdf4',
+              padding: '1rem',
               borderRadius: '10px',
               textAlign: 'center'
             }}>
-              <h3 style={{ color: '#15803d', margin: '0 0 0.5rem 0' }}>5</h3>
-              <p style={{ color: '#15803d', margin: 0, fontSize: '0.9rem' }}>Events Registered</p>
+              <h3 style={{ color: '#15803d', margin: '0 0 0.5rem 0' }}>12</h3>
+              <p style={{ color: '#15803d', margin: 0, fontSize: '0.9rem' }}>Tech Opportunities</p>
             </div>
             <div style={{ 
               background: '#fef3c7', 
@@ -847,6 +932,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         </div>
       </main>
     </div>
+    </>
   );
 };
 
