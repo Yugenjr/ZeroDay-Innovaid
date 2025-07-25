@@ -220,10 +220,15 @@ export const getApprovedLostFoundItems = async () => {
   try {
     const result = await getAllLostFoundItems();
     if (result.success) {
-      const approvedItems = result.items.filter(item => item.status === 'approved');
+      // Show items that are approved, claimed, or resolved (so students can see what's been found)
+      const publicItems = result.items.filter(item =>
+        item.status === 'approved' ||
+        item.status === 'claimed' ||
+        item.status === 'resolved'
+      );
       return {
         success: true,
-        items: approvedItems
+        items: publicItems
       };
     }
     return result;

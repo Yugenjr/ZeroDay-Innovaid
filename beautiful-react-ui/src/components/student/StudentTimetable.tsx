@@ -24,9 +24,10 @@ interface StudentTimetableProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
+  isDarkMode: boolean;
 }
 
-const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLogout }) => {
+const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLogout, isDarkMode }) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
     { id: '1', day: 'Monday', time: '09:00-10:00', subject: 'Data Structures', teacher: 'Dr. Smith', room: 'CS-101' },
     { id: '2', day: 'Monday', time: '10:00-11:00', subject: 'Algorithms', teacher: 'Prof. Johnson', room: 'CS-102' },
@@ -47,18 +48,24 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-    fontFamily: 'Arial, sans-serif'
+    background: isDarkMode
+      ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+      : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    fontFamily: 'Arial, sans-serif',
+    transition: 'background 0.3s ease'
   };
 
   const headerStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(30, 30, 60, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     padding: '1rem 2rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const backButtonStyle: React.CSSProperties = {
@@ -79,12 +86,15 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
   };
 
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(42, 42, 74, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     padding: '2rem',
     marginBottom: '2rem',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -111,19 +121,22 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
     display: 'grid',
     gridTemplateColumns: 'auto repeat(7, 1fr)',
     gap: '1px',
-    background: '#e2e8f0',
+    background: isDarkMode ? '#555' : '#e2e8f0',
     borderRadius: '10px',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    transition: 'background 0.3s ease'
   };
 
   const cellStyle: React.CSSProperties = {
-    background: 'white',
+    background: isDarkMode ? '#374151' : 'white',
     padding: '1rem',
     minHeight: '80px',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    color: isDarkMode ? '#fff' : '#333',
+    transition: 'background 0.3s ease, color 0.3s ease'
   };
 
   const headerCellStyle: React.CSSProperties = {
@@ -134,8 +147,8 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
   };
 
   const timeSlotStyle: React.CSSProperties = {
-    background: '#f0f9ff',
-    border: '2px solid #3b82f6',
+    background: isDarkMode ? '#1e3a8a' : '#f0f9ff',
+    border: `2px solid ${isDarkMode ? '#3b82f6' : '#3b82f6'}`,
     borderRadius: '8px',
     padding: '0.5rem',
     margin: '0.25rem',
@@ -184,7 +197,7 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
           <button style={backButtonStyle} onClick={onBack}>
             ← Back to Dashboard
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
             <span style={{ fontSize: '2rem' }}>📅</span>
             My Timetable
           </div>
@@ -203,7 +216,7 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
       <main style={mainContentStyle}>
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
+            <h2 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
               Weekly Schedule ({timeSlots.length} classes)
             </h2>
             <button
@@ -222,7 +235,7 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
               marginBottom: '2rem',
               border: '2px solid #e2e8f0'
             }}>
-              <h3 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>Add New Class</h3>
+              <h3 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Add New Class</h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <select
@@ -329,7 +342,7 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
 
         {/* Quick Stats */}
         <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>Weekly Summary</h3>
+          <h3 style={{ margin: '0 0 1rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Weekly Summary</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
             <div style={{ textAlign: 'center', padding: '1rem', background: '#f0f9ff', borderRadius: '10px' }}>
               <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#3b82f6' }}>{timeSlots.length}</h4>

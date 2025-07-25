@@ -130,10 +130,12 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
   const statusBadgeStyle = (status: string): React.CSSProperties => {
     const colors = {
       'pending': '#f59e0b',
+      'approved': '#3b82f6',
       'claimed': '#10b981',
-      'resolved': '#6b7280'
+      'resolved': '#6b7280',
+      'rejected': '#ef4444'
     };
-    
+
     return {
       background: colors[status as keyof typeof colors] || '#6b7280',
       color: 'white',
@@ -155,7 +157,7 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
   };
 
   const categories = [...new Set(items.map(item => item.category))];
-  const statuses = ['pending', 'claimed', 'resolved'];
+  const statuses = ['pending', 'approved', 'claimed', 'resolved', 'rejected'];
 
   const filteredItems = items.filter(item => {
     const matchesType = filterType === 'all' || item.type === filterType;
@@ -220,9 +222,10 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
     const lost = items.filter(item => item.type === 'lost').length;
     const found = items.filter(item => item.type === 'found').length;
     const pending = items.filter(item => item.status === 'pending').length;
+    const approved = items.filter(item => item.status === 'approved').length;
     const resolved = items.filter(item => item.status === 'resolved' || item.status === 'claimed').length;
-    
-    return { total, lost, found, pending, resolved };
+
+    return { total, lost, found, pending, approved, resolved };
   };
 
   const stats = getStats();
@@ -281,6 +284,10 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
           <div style={{ ...cardStyle, padding: '1.5rem', textAlign: 'center' }}>
             <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: '#f59e0b' }}>{stats.pending}</h3>
             <p style={{ margin: 0, color: '#666' }}>Pending</p>
+          </div>
+          <div style={{ ...cardStyle, padding: '1.5rem', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: '#3b82f6' }}>{stats.approved}</h3>
+            <p style={{ margin: 0, color: '#666' }}>Approved</p>
           </div>
           <div style={{ ...cardStyle, padding: '1.5rem', textAlign: 'center' }}>
             <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: '#6b7280' }}>{stats.resolved}</h3>
@@ -387,19 +394,51 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
                       <button
                         style={{
                           ...buttonStyle,
-                          background: updating === item.id ? '#6b7280' : '#10b981',
+                          background: updating === item.id ? '#6b7280' : '#3b82f6',
                           color: 'white',
                           opacity: updating === item.id ? 0.7 : 1
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (item.id) handleStatusChange(item.id, item.type === 'lost' ? 'resolved' : 'claimed');
+                          if (item.id) handleStatusChange(item.id, 'approved');
                         }}
                         disabled={updating === item.id}
                       >
-                        {updating === item.id ? '⏳ Updating...' : (item.type === 'lost' ? 'Mark Found' : 'Mark Claimed')}
+                        {updating === item.id ? '⏳ Updating...' : '✅ Approve'}
+                      </button>
+                      <button
+                        style={{
+                          ...buttonStyle,
+                          background: updating === item.id ? '#6b7280' : '#ef4444',
+                          color: 'white',
+                          opacity: updating === item.id ? 0.7 : 1
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.id) handleStatusChange(item.id, 'rejected');
+                        }}
+                        disabled={updating === item.id}
+                      >
+                        {updating === item.id ? '⏳ Updating...' : '❌ Reject'}
                       </button>
                     </>
+                  )}
+                  {item.status === 'approved' && (
+                    <button
+                      style={{
+                        ...buttonStyle,
+                        background: updating === item.id ? '#6b7280' : '#10b981',
+                        color: 'white',
+                        opacity: updating === item.id ? 0.7 : 1
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (item.id) handleStatusChange(item.id, item.type === 'lost' ? 'resolved' : 'claimed');
+                      }}
+                      disabled={updating === item.id}
+                    >
+                      {updating === item.id ? '⏳ Updating...' : (item.type === 'lost' ? '🎯 Mark Found' : '✅ Mark Claimed')}
+                    </button>
                   )}
                   <button
                     style={{
@@ -495,6 +534,32 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
               
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 {selectedItem.status === 'pending' && (
+                  <>
+                    <button
+                      style={{ ...buttonStyle, background: '#3b82f6', color: 'white' }}
+                      onClick={() => {
+                        if (selectedItem.id) {
+                          handleStatusChange(selectedItem.id, 'approved');
+                          setSelectedItem(null);
+                        }
+                      }}
+                    >
+                      ✅ Approve
+                    </button>
+                    <button
+                      style={{ ...buttonStyle, background: '#ef4444', color: 'white' }}
+                      onClick={() => {
+                        if (selectedItem.id) {
+                          handleStatusChange(selectedItem.id, 'rejected');
+                          setSelectedItem(null);
+                        }
+                      }}
+                    >
+                      ❌ Reject
+                    </button>
+                  </>
+                )}
+                {selectedItem.status === 'approved' && (
                   <button
                     style={{ ...buttonStyle, background: '#10b981', color: 'white' }}
                     onClick={() => {
@@ -504,7 +569,7 @@ const LostFoundManagement: React.FC<LostFoundManagementProps> = ({ user, onBack,
                       }
                     }}
                   >
-                    {selectedItem.type === 'lost' ? 'Mark as Found' : 'Mark as Claimed'}
+                    {selectedItem.type === 'lost' ? '🎯 Mark as Found' : '✅ Mark as Claimed'}
                   </button>
                 )}
                 <button

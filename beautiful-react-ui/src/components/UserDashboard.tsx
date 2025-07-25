@@ -223,15 +223,15 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   if (activeSection) {
     switch (activeSection) {
       case 'announcements':
-        return <StudentAnnouncements user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+        return <StudentAnnouncements user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'lostfound':
-        return <StudentLostFound user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+        return <StudentLostFound user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'timetable':
-        return <StudentTimetable user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+        return <StudentTimetable user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'hostel':
-        return <StudentHostelComplaints user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+        return <StudentHostelComplaints user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'skillexchange':
-        return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
+        return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'techupdates':
         return <TechUpdates user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'profile':
@@ -240,8 +240,15 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
             {/* Profile Header */}
             <header style={headerStyle}>
               <div style={logoStyle}>
-                <span style={{ fontSize: '2rem' }}>🎓</span>
-                InnovAid
+                <img
+                  src={isDarkMode ? "/logo-dark.png" : "/logo-light.png"}
+                  alt="InnovAid Logo"
+                  style={{
+                    height: '65px',
+                    width: 'auto',
+                    objectFit: 'contain'
+                  }}
+                />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -312,14 +319,16 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                       margin: '0 0 0.5rem 0',
                       fontSize: '2rem',
                       color: isDarkMode ? '#fff' : '#333',
-                      fontWeight: '700'
+                      fontWeight: '700',
+                      transition: 'color 0.3s ease'
                     }}>
                       {user.name}
                     </h1>
                     <p style={{
                       margin: '0 0 0.5rem 0',
                       fontSize: '1.1rem',
-                      color: isDarkMode ? '#ccc' : '#666'
+                      color: isDarkMode ? '#ccc' : '#666',
+                      transition: 'color 0.3s ease'
                     }}>
                       {user.email}
                     </p>
@@ -327,7 +336,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                       margin: 0,
                       fontSize: '1rem',
                       color: isDarkMode ? '#aaa' : '#888',
-                      fontWeight: '600'
+                      fontWeight: '600',
+                      transition: 'color 0.3s ease'
                     }}>
                       {user.department} • Year {user.year}
                     </p>
@@ -341,11 +351,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                     fontSize: '1.5rem',
                     color: isDarkMode ? '#fff' : '#333',
                     fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
+                    transition: 'color 0.3s ease'
                   }}>
-                    📋 Basic Information
+                    Basic Information
                   </h2>
                   <div style={{
                     background: isDarkMode ? 'rgba(51, 51, 51, 0.5)' : 'rgba(248, 249, 250, 0.8)',
@@ -416,11 +424,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                     fontSize: '1.5rem',
                     color: isDarkMode ? '#fff' : '#333',
                     fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
+                    transition: 'color 0.3s ease'
                   }}>
-                    🌙 Appearance Settings
+                    Appearance Settings
                   </h2>
                   <div style={{
                     background: isDarkMode ? 'rgba(51, 51, 51, 0.5)' : 'rgba(248, 249, 250, 0.8)',
@@ -437,14 +443,16 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                           margin: '0 0 0.5rem 0',
                           fontSize: '1.1rem',
                           color: isDarkMode ? '#fff' : '#333',
-                          fontWeight: '600'
+                          fontWeight: '600',
+                          transition: 'color 0.3s ease'
                         }}>
                           Dark Mode
                         </h3>
                         <p style={{
                           margin: 0,
                           fontSize: '0.9rem',
-                          color: isDarkMode ? '#ccc' : '#666'
+                          color: isDarkMode ? '#ccc' : '#666',
+                          transition: 'color 0.3s ease'
                         }}>
                           Switch between light and dark themes
                         </p>
@@ -485,11 +493,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                     fontSize: '1.5rem',
                     color: isDarkMode ? '#fff' : '#333',
                     fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
+                    transition: 'color 0.3s ease'
                   }}>
-                    🔔 Recent Notifications
+                    Recent Notifications
                   </h2>
                   <div style={{
                     background: isDarkMode ? 'rgba(51, 51, 51, 0.5)' : 'rgba(248, 249, 250, 0.8)',
@@ -522,14 +528,16 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                             fontSize: '1rem',
                             color: isDarkMode ? '#fff' : '#333',
                             fontWeight: notification.isRead ? '400' : '600',
-                            lineHeight: '1.5'
+                            lineHeight: '1.5',
+                            transition: 'color 0.3s ease'
                           }}>
                             {notification.message}
                           </p>
                           <p style={{
                             margin: 0,
                             fontSize: '0.85rem',
-                            color: isDarkMode ? '#aaa' : '#888'
+                            color: isDarkMode ? '#aaa' : '#888',
+                            transition: 'color 0.3s ease'
                           }}>
                             {notification.createdAt.toLocaleDateString('en-US', {
                               month: 'short',
@@ -551,11 +559,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                     fontSize: '1.5rem',
                     color: isDarkMode ? '#fff' : '#333',
                     fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
+                    transition: 'color 0.3s ease'
                   }}>
-                    💬 Feedback & Complaints
+                    Feedback & Complaints
                   </h2>
                   {!showFeedbackForm ? (
                     <button
@@ -584,7 +590,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                         e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
                       }}
                     >
-                      📝 Submit Feedback or Complaint
+                      Submit Feedback or Complaint
                     </button>
                   ) : (
                     <form onSubmit={handleFeedbackSubmit} style={{
@@ -655,7 +661,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                             e.currentTarget.style.background = '#10b981';
                           }}
                         >
-                          ✅ Submit
+                          Submit
                         </button>
                         <button
                           type="button"
@@ -682,7 +688,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                             e.currentTarget.style.background = '#6b7280';
                           }}
                         >
-                          ❌ Cancel
+                          Cancel
                         </button>
                       </div>
                     </form>
@@ -716,7 +722,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.3)';
                     }}
                   >
-                    🚪 Logout from Account
+                    Logout from Account
                   </button>
                 </div>
               </div>
@@ -757,8 +763,15 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
       <div style={containerStyle}>
       <header style={headerStyle}>
         <div style={logoStyle}>
-          <span style={{ fontSize: '2rem' }}>🎓</span>
-          InnovAid
+          <img
+            src={isDarkMode ? "/logo-dark.png" : "/logo-light.png"}
+            alt="InnovAid Logo"
+            style={{
+              height: '65px',
+              width: 'auto',
+              objectFit: 'contain'
+            }}
+          />
         </div>
 
         <div style={userInfoStyle}>

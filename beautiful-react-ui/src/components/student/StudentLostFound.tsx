@@ -17,9 +17,10 @@ interface StudentLostFoundProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
+  isDarkMode: boolean;
 }
 
-const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLogout }) => {
+const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLogout, isDarkMode }) => {
   const [items, setItems] = useState<LostFoundItem[]>([]);
   const [myItems, setMyItems] = useState<LostFoundItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,18 +69,24 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-    fontFamily: 'Arial, sans-serif'
+    background: isDarkMode
+      ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+      : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    fontFamily: 'Arial, sans-serif',
+    transition: 'background 0.3s ease'
   };
 
   const headerStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(30, 30, 60, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     padding: '1rem 2rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const backButtonStyle: React.CSSProperties = {
@@ -100,12 +107,15 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
   };
 
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(42, 42, 74, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     padding: '2rem',
     marginBottom: '2rem',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -135,12 +145,12 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
   };
 
   const itemCardStyle: React.CSSProperties = {
-    background: 'white',
+    background: isDarkMode ? 'rgba(51, 51, 51, 0.8)' : 'white',
     borderRadius: '15px',
     padding: '1.5rem',
     boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-    border: '1px solid #e2e8f0',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+    border: `1px solid ${isDarkMode ? '#555' : '#e2e8f0'}`,
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border 0.3s ease'
   };
 
   const typeBadgeStyle = (type: string): React.CSSProperties => ({
@@ -155,10 +165,12 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
   const statusBadgeStyle = (status: string): React.CSSProperties => {
     const colors = {
       'pending': '#f59e0b',
+      'approved': '#3b82f6',
       'claimed': '#10b981',
-      'resolved': '#6b7280'
+      'resolved': '#6b7280',
+      'rejected': '#ef4444'
     };
-    
+
     return {
       background: colors[status as keyof typeof colors] || '#6b7280',
       color: 'white',
@@ -251,7 +263,7 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
           <button style={backButtonStyle} onClick={onBack}>
             ← Back to Dashboard
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
             <span style={{ fontSize: '2rem' }}>🔍</span>
             Lost & Found
           </div>
@@ -284,7 +296,7 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
 
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
+            <h2 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
               Lost & Found Items ({loading ? '...' : filteredItems.length})
             </h2>
             <button
@@ -304,7 +316,7 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
               marginBottom: '2rem',
               border: '2px solid #e2e8f0'
             }}>
-              <h3 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>Report Lost/Found Item</h3>
+              <h3 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Report Lost/Found Item</h3>
               
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                 <button
@@ -462,9 +474,25 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
                   {item.description}
                 </p>
                 
-                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.875rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
                   <strong>Reported by:</strong> {item.reportedBy}
                 </p>
+
+                {(item.status === 'approved' || item.status === 'claimed' || item.status === 'resolved') && item.studentEmail && (
+                  <div style={{
+                    background: '#f0f9ff',
+                    border: '1px solid #0ea5e9',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    fontSize: '0.85rem',
+                    color: '#0369a1',
+                    marginTop: '1rem'
+                  }}>
+                    💡 <strong>Contact:</strong> {item.studentEmail}
+                    {item.status === 'resolved' && <span style={{ color: '#059669', fontWeight: 'bold' }}> (FOUND!)</span>}
+                    {item.status === 'claimed' && <span style={{ color: '#059669', fontWeight: 'bold' }}> (CLAIMED!)</span>}
+                  </div>
+                )}
               </div>
             ))}
           </div>

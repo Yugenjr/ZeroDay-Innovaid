@@ -17,9 +17,10 @@ interface StudentHostelComplaintsProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
+  isDarkMode: boolean;
 }
 
-const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user, onBack, onLogout }) => {
+const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user, onBack, onLogout, isDarkMode }) => {
   const [isHosteler, setIsHosteler] = useState<boolean | null>(null);
   const [complaints, setComplaints] = useState<HostelComplaint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,18 +70,24 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-    fontFamily: 'Arial, sans-serif'
+    background: isDarkMode
+      ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+      : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    fontFamily: 'Arial, sans-serif',
+    transition: 'background 0.3s ease'
   };
 
   const headerStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(30, 30, 60, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     padding: '1rem 2rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const backButtonStyle: React.CSSProperties = {
@@ -101,12 +108,15 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
   };
 
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(42, 42, 74, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     padding: '2rem',
     marginBottom: '2rem',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -123,20 +133,23 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '0.75rem',
-    border: '2px solid #e2e8f0',
+    border: `2px solid ${isDarkMode ? '#555' : '#e2e8f0'}`,
     borderRadius: '8px',
     fontSize: '1rem',
-    marginBottom: '1rem'
+    marginBottom: '1rem',
+    background: isDarkMode ? '#444' : 'white',
+    color: isDarkMode ? '#fff' : '#333',
+    transition: 'all 0.3s ease'
   };
 
   const complaintCardStyle: React.CSSProperties = {
-    background: 'white',
+    background: isDarkMode ? 'rgba(51, 51, 51, 0.8)' : 'white',
     borderRadius: '15px',
     padding: '1.5rem',
     marginBottom: '1rem',
     boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-    border: '1px solid #e2e8f0',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+    border: `1px solid ${isDarkMode ? '#555' : '#e2e8f0'}`,
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border 0.3s ease'
   };
 
   const statusBadgeStyle = (status: string): React.CSSProperties => {
@@ -258,7 +271,7 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
             <button style={backButtonStyle} onClick={onBack}>
               ← Back to Dashboard
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
               <span style={{ fontSize: '2rem' }}>🏠</span>
               Hostel Complaints
             </div>
@@ -278,10 +291,10 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
           <div style={cardStyle}>
             <div style={{ textAlign: 'center', padding: '3rem' }}>
               <div style={{ fontSize: '4rem', marginBottom: '2rem' }}>🏠</div>
-              <h2 style={{ margin: '0 0 1rem 0', color: '#333', fontSize: '2rem' }}>
+              <h2 style={{ margin: '0 0 1rem 0', color: isDarkMode ? '#fff' : '#333', fontSize: '2rem', transition: 'color 0.3s ease' }}>
                 Hostel Accommodation Status
               </h2>
-              <p style={{ margin: '0 0 2rem 0', color: '#666', fontSize: '1.1rem' }}>
+              <p style={{ margin: '0 0 2rem 0', color: isDarkMode ? '#ccc' : '#666', fontSize: '1.1rem', transition: 'color 0.3s ease' }}>
                 Are you a hostel resident or a day scholar?
               </p>
               
@@ -338,7 +351,7 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
             <button style={backButtonStyle} onClick={onBack}>
               ← Back to Dashboard
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
               <span style={{ fontSize: '2rem' }}>🏠</span>
               Hostel Complaints
             </div>
@@ -358,10 +371,10 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
           <div style={cardStyle}>
             <div style={{ textAlign: 'center', padding: '3rem' }}>
               <div style={{ fontSize: '4rem', marginBottom: '2rem' }}>🚌</div>
-              <h2 style={{ margin: '0 0 1rem 0', color: '#333', fontSize: '2rem' }}>
+              <h2 style={{ margin: '0 0 1rem 0', color: isDarkMode ? '#fff' : '#333', fontSize: '2rem', transition: 'color 0.3s ease' }}>
                 Access Restricted
               </h2>
-              <p style={{ margin: '0 0 2rem 0', color: '#666', fontSize: '1.1rem' }}>
+              <p style={{ margin: '0 0 2rem 0', color: isDarkMode ? '#ccc' : '#666', fontSize: '1.1rem', transition: 'color 0.3s ease' }}>
                 This service is only available for hostel residents. As a day scholar, you don't have access to hostel complaint services.
               </p>
               
@@ -422,7 +435,7 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
           )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
+            <h2 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
               My Complaints ({userComplaints.length})
             </h2>
             <button
@@ -441,7 +454,7 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
               marginBottom: '2rem',
               border: '2px solid #e2e8f0'
             }}>
-              <h3 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>Submit New Complaint</h3>
+              <h3 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Submit New Complaint</h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <select
@@ -520,7 +533,7 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.1rem' }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: isDarkMode ? '#fff' : '#333', fontSize: '1.1rem', transition: 'color 0.3s ease' }}>
                       {complaint.type} Issue
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -541,7 +554,7 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
                   <strong>Room:</strong> {complaint.room} (Block {complaint.hostelBlock})
                 </p>
                 
-                <p style={{ margin: '0', color: '#4b5563', lineHeight: '1.6' }}>
+                <p style={{ margin: '0', color: isDarkMode ? '#ddd' : '#4b5563', lineHeight: '1.6', transition: 'color 0.3s ease' }}>
                   {complaint.description}
                 </p>
               </div>

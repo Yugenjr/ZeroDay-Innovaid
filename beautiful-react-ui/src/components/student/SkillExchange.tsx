@@ -19,9 +19,10 @@ interface SkillExchangeProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
+  isDarkMode: boolean;
 }
 
-const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout }) => {
+const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout, isDarkMode }) => {
   const [courses, setCourses] = useState<SkillCourse[]>([]);
   const [myCourses, setMyCourses] = useState<SkillCourse[]>([]);
   const [myRegistrations, setMyRegistrations] = useState<CourseRegistration[]>([]);
@@ -149,18 +150,24 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
   // Styles
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    fontFamily: 'Arial, sans-serif'
+    background: isDarkMode
+      ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    fontFamily: 'Arial, sans-serif',
+    transition: 'background 0.3s ease'
   };
 
   const headerStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(30, 30, 60, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     padding: '1rem 2rem',
     boxShadow: '0 2px 20px rgba(0,0,0,0.1)',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    transition: 'background 0.3s ease'
   };
 
   const mainContentStyle: React.CSSProperties = {
@@ -170,12 +177,15 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
   };
 
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(42, 42, 74, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     padding: '2rem',
     boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-    marginBottom: '2rem'
+    marginBottom: '2rem',
+    transition: 'background 0.3s ease'
   };
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({
@@ -202,12 +212,12 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
   };
 
   const courseCardStyle: React.CSSProperties = {
-    background: 'white',
+    background: isDarkMode ? 'rgba(51, 51, 51, 0.8)' : 'white',
     borderRadius: '15px',
     padding: '1.5rem',
     marginBottom: '1.5rem',
     boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-    border: '1px solid #e5e7eb',
+    border: `1px solid ${isDarkMode ? '#555' : '#e5e7eb'}`,
     transition: 'all 0.3s ease',
     cursor: 'pointer'
   };
@@ -223,12 +233,12 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
           >
             ← Back
           </button>
-          <h1 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
+          <h1 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
             🎓 Skill Exchange Marketplace
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ color: '#666' }}>Welcome, {user.name}</span>
+          <span style={{ color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>Welcome, {user.name}</span>
           <button style={buttonStyle} onClick={onLogout}>
             Logout
           </button>
@@ -283,19 +293,19 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ fontSize: '1.2rem', color: '#666' }}>Loading courses...</div>
+              <div style={{ fontSize: '1.2rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>Loading courses...</div>
             </div>
           ) : (
             <>
               {/* Browse Courses Tab */}
               {activeTab === 'browse' && (
                 <div>
-                  <h2 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>
+                  <h2 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
                     Available Courses ({courses.length})
                   </h2>
                   
                   {courses.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                    <div style={{ textAlign: 'center', padding: '2rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                       No courses available yet. Be the first to create one!
                     </div>
                   ) : (
@@ -308,10 +318,10 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                             <div>
-                              <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.2rem' }}>
+                              <h3 style={{ margin: '0 0 0.5rem 0', color: isDarkMode ? '#fff' : '#333', fontSize: '1.2rem', transition: 'color 0.3s ease' }}>
                                 {course.title}
                               </h3>
-                              <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.9rem' }}>
+                              <p style={{ margin: '0 0 0.5rem 0', color: isDarkMode ? '#ccc' : '#666', fontSize: '0.9rem', transition: 'color 0.3s ease' }}>
                                 by {course.instructorName} • {course.instructorDepartment} • Year {course.instructorYear}
                               </p>
                             </div>
@@ -352,19 +362,19 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                             <div>
                               <strong>📅 Date & Time:</strong><br />
-                              <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                              <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                 {formatDateTime(course.dateTime)}
                               </span>
                             </div>
                             <div>
                               <strong>⏱️ Duration:</strong><br />
-                              <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                              <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                 {course.duration} minutes
                               </span>
                             </div>
                             <div>
                               <strong>👥 Capacity:</strong><br />
-                              <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                              <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                 {(course.registeredStudents || []).length} / {course.maxLearners} students
                               </span>
                             </div>
@@ -380,7 +390,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                            <div style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                               Category: <strong>{course.category}</strong>
                             </div>
                             
@@ -437,12 +447,12 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
               {/* My Courses Tab */}
               {activeTab === 'my-courses' && (
                 <div>
-                  <h2 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>
+                  <h2 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
                     My Created Courses ({myCourses.length})
                   </h2>
                   
                   {myCourses.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                    <div style={{ textAlign: 'center', padding: '2rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                       You haven't created any courses yet. Click "Create Course" to get started!
                     </div>
                   ) : (
@@ -450,7 +460,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                       {myCourses.map((course) => (
                         <div key={course.id} style={courseCardStyle}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                            <h3 style={{ margin: '0', color: '#333', fontSize: '1.2rem' }}>
+                            <h3 style={{ margin: '0', color: isDarkMode ? '#fff' : '#333', fontSize: '1.2rem', transition: 'color 0.3s ease' }}>
                               {course.title}
                             </h3>
                             <span style={{
@@ -472,13 +482,13 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                             <div>
                               <strong>📅 Date & Time:</strong><br />
-                              <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                              <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                 {formatDateTime(course.dateTime)}
                               </span>
                             </div>
                             <div>
                               <strong>👥 Registered:</strong><br />
-                              <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                              <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                 {(course.registeredStudents || []).length} / {course.maxLearners} students
                               </span>
                             </div>
@@ -517,12 +527,12 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
               {/* My Registrations Tab */}
               {activeTab === 'my-registrations' && (
                 <div>
-                  <h2 style={{ margin: '0 0 1.5rem 0', color: '#333' }}>
+                  <h2 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
                     My Course Registrations ({myRegistrations.length})
                   </h2>
                   
                   {myRegistrations.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                    <div style={{ textAlign: 'center', padding: '2rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                       You haven't registered for any courses yet. Browse available courses to get started!
                     </div>
                   ) : (
@@ -532,7 +542,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                         return (
                           <div key={registration.id} style={courseCardStyle}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                              <h3 style={{ margin: '0', color: '#333', fontSize: '1.2rem' }}>
+                              <h3 style={{ margin: '0', color: isDarkMode ? '#fff' : '#333', fontSize: '1.2rem', transition: 'color 0.3s ease' }}>
                                 {registration.courseTitle}
                               </h3>
                               <span style={{
@@ -551,7 +561,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                               <div>
                                 <strong>📅 Registered On:</strong><br />
-                                <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                                <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                   {new Date(registration.registrationDate).toLocaleDateString()}
                                 </span>
                               </div>
@@ -559,7 +569,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout })
                                 <>
                                   <div>
                                     <strong>📅 Course Date:</strong><br />
-                                    <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                                    <span style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', transition: 'color 0.3s ease' }}>
                                       {formatDateTime(course.dateTime)}
                                     </span>
                                   </div>

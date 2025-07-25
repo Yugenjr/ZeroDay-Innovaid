@@ -357,8 +357,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     <div style={containerStyle}>
       <header style={headerStyle}>
         <div style={logoStyle}>
-          <span style={{ fontSize: '2rem' }}>🎓</span>
-          InnovAid
+          <img
+            src="/logo-light.png"
+            alt="InnovAid Logo"
+            style={{
+              height: '60px',
+              width: 'auto',
+              objectFit: 'contain'
+            }}
+          />
           <span style={adminBadgeStyle}>ADMIN</span>
         </div>
         

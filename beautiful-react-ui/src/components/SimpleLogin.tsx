@@ -112,6 +112,12 @@ const SimpleLogin: React.FC = () => {
           return;
         }
 
+        // Validate email domain for institutional email
+        if (!formData.email.endsWith('@sece.ac.in')) {
+          setMessage('❌ Error: Invalid email domain. Please use your institutional email ending with @sece.ac.in');
+          return;
+        }
+
         // Handle different form types for registration
         let userData;
 
@@ -360,19 +366,21 @@ const SimpleLogin: React.FC = () => {
       <div style={cardStyle}>
         <div style={headerStyle}>
           <div style={{
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            borderRadius: '50%',
             margin: '0 auto 1rem',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2rem'
+            justifyContent: 'center'
           }}>
-            🎓
+            <img
+              src="/logo-light.png"
+              alt="InnovAid Logo"
+              style={{
+                height: '100px',
+                width: 'auto',
+                objectFit: 'contain'
+              }}
+            />
           </div>
-          <h1 style={titleStyle}>InnovAid</h1>
           <p style={{ color: '#666', fontSize: '1.1rem' }}>Campus Utilities Platform</p>
         </div>
 
@@ -441,15 +449,24 @@ const SimpleLogin: React.FC = () => {
                 onChange={handleInputChange}
                 required
               />
-              <input
+              <select
                 style={inputStyle}
-                type="text"
                 name="department"
-                placeholder="Department (e.g., Computer Science)"
                 value={formData.department || ''}
                 onChange={handleInputChange}
                 required
-              />
+              >
+                <option value="">Select Department</option>
+                <option value="AIDS">AIDS (Artificial Intelligence & Data Science)</option>
+                <option value="CSE">CSE (Computer Science & Engineering)</option>
+                <option value="EEE">EEE (Electrical & Electronics Engineering)</option>
+                <option value="ECE">ECE (Electronics & Communication Engineering)</option>
+                <option value="MECH">MECH (Mechanical Engineering)</option>
+                <option value="CSBS">CSBS (Computer Science & Business Systems)</option>
+                <option value="AIML">AIML (Artificial Intelligence & Machine Learning)</option>
+                <option value="CYBER">CYBER (Cyber Security)</option>
+                <option value="CCE">CCE (Computer & Communication Engineering)</option>
+              </select>
               <select
                 style={inputStyle}
                 name="year"
