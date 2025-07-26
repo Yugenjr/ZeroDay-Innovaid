@@ -1,6 +1,6 @@
-# Beautiful React UI
+# Innovaid for SECE
 
-This project is a beautiful React UI application that demonstrates the use of functional components and TypeScript. It includes a simple button component and serves as a foundation for building more complex UIs.
+This project is the Innovaid campus utilities platform for Sri Eshwar College of Engineering (SECE). It's a comprehensive React application built with TypeScript that provides various campus services and utilities for students and administrators.
 
 ## Getting Started
 
@@ -18,13 +18,13 @@ Make sure you have the following installed on your machine:
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/beautiful-react-ui.git
+   git clone https://github.com/yourusername/innovaid-for-sece.git
    ```
 
 2. Navigate to the project directory:
 
    ```
-   cd beautiful-react-ui
+   cd innovaid-for-sece
    ```
 
 3. Install the dependencies:

@@ -464,7 +464,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             color: '#666', 
             fontSize: '1.1rem' 
           }}>
-            Welcome back, {user.name.split(' ')[0]}! Monitor system performance and manage campus utilities from here.
+            Welcome back, {user.name.split(' ')[0]}! Manage Innovaid for SECE campus utilities and monitor system performance from here.
           </p>
         </div>
 

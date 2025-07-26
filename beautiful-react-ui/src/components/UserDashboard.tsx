@@ -1026,7 +1026,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
             marginBottom: '1.5rem',
             transition: 'color 0.3s ease'
           }}>
-            Welcome to your student dashboard. Explore our services to make the most of your college experience.
+            Welcome to Innovaid for SECE! Explore our campus services and utilities to make the most of your college experience.
           </p>
           
 

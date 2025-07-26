@@ -18,13 +18,13 @@ Make sure you have the following installed on your machine:
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/beautiful-react-ui.git
+   git clone https://github.com/yourusername/innovaid-for-sece.git
    ```
 
 2. Navigate to the project directory:
 
    ```
-   cd beautiful-react-ui
+   cd innovaid-for-sece
    ```
 
 3. Install the dependencies:

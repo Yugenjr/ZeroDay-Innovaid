@@ -127,18 +127,22 @@ export const registerUser = async (
   } catch (error: any) {
     console.error('Registration error:', error);
 
-    // Handle specific Firebase Auth errors
-    let errorMessage = 'Registration failed';
+    // Handle specific Firebase Auth errors with user-friendly messages
+    let errorMessage = 'Registration failed. Please try again.';
     if (error.code === 'auth/email-already-in-use') {
       // Clean up orphaned data more thoroughly
       await cleanupOrphanedUserData(email);
-      errorMessage = 'This email was previously registered but incompletely deleted. Please wait a few minutes and try again, or use a different email address.';
+      errorMessage = 'This email address is already registered. Please use the login form instead, or try a different email address.';
     } else if (error.code === 'auth/weak-password') {
-      errorMessage = 'Password is too weak. Please use at least 6 characters.';
+      errorMessage = 'Password must be at least 6 characters long. Please choose a stronger password.';
     } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Invalid email address format.';
+      errorMessage = 'Please enter a valid email address.';
+    } else if (error.code === 'auth/operation-not-allowed') {
+      errorMessage = 'Email registration is currently disabled. Please contact support.';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many registration attempts. Please wait a few minutes before trying again.';
     } else {
-      errorMessage = error.message || 'Registration failed';
+      errorMessage = 'Registration failed. Please check your information and try again.';
     }
 
     return {
@@ -167,14 +171,35 @@ export const loginUser = async (email: string, password: string) => {
     } else {
       return {
         success: false,
-        message: 'User data not found'
+        message: 'Account not found. Please check your credentials or register first.'
       };
     }
   } catch (error: any) {
     console.error('Login error:', error);
+
+    // Handle specific Firebase Auth errors with user-friendly messages
+    let errorMessage = 'Login failed. Please try again.';
+    if (error.code === 'auth/user-not-found') {
+      errorMessage = 'No account found with this email address. Please check your email or register first.';
+    } else if (error.code === 'auth/wrong-password') {
+      errorMessage = 'Incorrect password. Please check your password and try again.';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Please enter a valid email address.';
+    } else if (error.code === 'auth/user-disabled') {
+      errorMessage = 'This account has been disabled. Please contact support.';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many failed login attempts. Please wait a few minutes before trying again.';
+    } else if (error.code === 'auth/network-request-failed') {
+      errorMessage = 'Network error. Please check your internet connection and try again.';
+    } else if (error.code === 'auth/invalid-credential') {
+      errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+    } else {
+      errorMessage = 'Login failed. Please check your email and password.';
+    }
+
     return {
       success: false,
-      message: error.message || 'Login failed'
+      message: errorMessage
     };
   }
 };

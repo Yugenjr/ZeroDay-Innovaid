@@ -1,4 +1,4 @@
-// Complete Script Error Suppression System
+// Innovaid for SECE - Script Error Suppression System
 // This script completely eliminates all script error popups
 
 (function() {

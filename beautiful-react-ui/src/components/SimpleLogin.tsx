@@ -95,27 +95,36 @@ const SimpleLogin: React.FC = () => {
           if (userRole !== selectedUserRole) {
             const correctRoleText = userRole === 'user' ? 'Student' : 'Admin';
             const selectedRoleText = selectedUserRole === 'user' ? 'Student' : 'Admin';
-            setMessage(`❌ Error: You are registered as a ${correctRoleText}, but trying to login as ${selectedRoleText}. Please select the correct role.`);
+            setMessage(`Role mismatch: You are registered as a ${correctRoleText}, but trying to login as ${selectedRoleText}. Please select the correct role above.`);
             return;
           }
 
-          setMessage(`✅ Login successful! Welcome ${result.user.name}!`);
+          setMessage(`Welcome back, ${result.user.name}! Login successful.`);
           localStorage.setItem('user', JSON.stringify(result.user));
           setCurrentUser(result.user);
         } else {
-          setMessage(`❌ Error: ${result.message}`);
+          setMessage(result.message);
         }
       } else {
         // Register with Firebase
         if (!formData.name || formData.name.trim() === '') {
-          setMessage('❌ Error: Name is required for registration');
+          setMessage('Please enter your full name to complete registration.');
           return;
         }
 
         // Validate email domain for institutional email
-        if (!formData.email.endsWith('@sece.ac.in')) {
-          setMessage('❌ Error: Invalid email domain. Please use your institutional email ending with @sece.ac.in');
-          return;
+        if (selectedRole === 'user') {
+          // Student email validation
+          if (!formData.email.endsWith('@sece.ac.in')) {
+            setMessage('Please use your institutional email address ending with @sece.ac.in');
+            return;
+          }
+        } else {
+          // Admin email validation
+          if (!formData.email.endsWith('st@sece.ac.in')) {
+            setMessage('Admin registration requires email ending with st@sece.ac.in');
+            return;
+          }
         }
 
         // Handle different form types for registration
@@ -144,16 +153,16 @@ const SimpleLogin: React.FC = () => {
         const result = await registerUser(formData.email, formData.password, userData);
 
         if (result.success && result.user) {
-          setMessage(`✅ Registration successful! Welcome ${result.user.name}!`);
+          setMessage(`Registration successful! Welcome to the platform, ${result.user.name}!`);
           localStorage.setItem('user', JSON.stringify(result.user));
           setCurrentUser(result.user);
         } else {
-          setMessage(`❌ Error: ${result.message}`);
+          setMessage(result.message);
         }
       }
     } catch (error) {
       console.error('Authentication error:', error);
-      setMessage('❌ Authentication error: Please try again');
+      setMessage('Something went wrong. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +177,7 @@ const SimpleLogin: React.FC = () => {
       if (result.success) {
         localStorage.removeItem('user');
         setCurrentUser(null);
-        setMessage('✅ Logged out successfully!');
+        setMessage('You have been logged out successfully.');
         // Reset both form states
         setStudentFormData({
           email: '',
@@ -189,14 +198,14 @@ const SimpleLogin: React.FC = () => {
           phone: ''
         });
       } else {
-        setMessage(`❌ Logout error: ${result.message}`);
+        setMessage(`Logout failed: ${result.message}`);
       }
     } catch (error) {
       console.error('Logout error:', error);
       // Fallback logout
       localStorage.removeItem('user');
       setCurrentUser(null);
-      setMessage('✅ Logged out successfully!');
+      setMessage('You have been logged out successfully.');
       // Reset both form states
       setStudentFormData({
         email: '',
@@ -380,13 +389,22 @@ const SimpleLogin: React.FC = () => {
     opacity: isLoading ? 0.7 : 1
   };
 
+  const isSuccessMessage = message.includes('successful') || message.includes('Welcome') || message.includes('logged out');
+  const isErrorMessage = message.includes('failed') || message.includes('error') || message.includes('Error') ||
+                         message.includes('Invalid') || message.includes('incorrect') || message.includes('mismatch') ||
+                         message.includes('required') || message.includes('Please') || message.includes('No account') ||
+                         message.includes('disabled') || message.includes('Too many') || message.includes('Network');
+
   const messageStyle: React.CSSProperties = {
     padding: '1rem',
     borderRadius: '10px',
     marginTop: '1rem',
-    background: message.includes('✅') ? '#d4edda' : '#f8d7da',
-    color: message.includes('✅') ? '#155724' : '#721c24',
-    border: `1px solid ${message.includes('✅') ? '#c3e6cb' : '#f5c6cb'}`
+    background: isSuccessMessage ? '#d4edda' : isErrorMessage ? '#f8d7da' : '#e2e3e5',
+    color: isSuccessMessage ? '#155724' : isErrorMessage ? '#721c24' : '#383d41',
+    border: `1px solid ${isSuccessMessage ? '#c3e6cb' : isErrorMessage ? '#f5c6cb' : '#d6d8db'}`,
+    fontSize: '0.9rem',
+    textAlign: 'center',
+    fontWeight: '500'
   };
 
   return (
@@ -426,7 +444,7 @@ const SimpleLogin: React.FC = () => {
               }}
             />
           </div>
-          <p style={{ color: '#666', fontSize: '1.1rem' }}>Campus Utilities Platform</p>
+          <p style={{ color: '#666', fontSize: '1.1rem' }}>Innovaid for SECE - Campus Utilities Platform</p>
         </div>
 
         <div style={{ display: 'flex', marginBottom: '2rem' }}>

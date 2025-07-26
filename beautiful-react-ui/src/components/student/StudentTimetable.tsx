@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
-
-interface TimeSlot {
-  id: string;
-  day: string;
-  time: string;
-  subject: string;
-  teacher: string;
-  room: string;
-}
+import React, { useState, useEffect } from 'react';
+import {
+  TimetableSlot,
+  getTimetableSlots,
+  subscribeToTimetableSlots,
+  testTimetableConnection
+} from '../../firebase/realtimeTimetable';
 
 interface User {
   _id: string;
@@ -28,23 +25,56 @@ interface StudentTimetableProps {
 }
 
 const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLogout, isDarkMode }) => {
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
-    { id: '1', day: 'Monday', time: '09:00-10:00', subject: 'Data Structures', teacher: 'Dr. Smith', room: 'CS-101' },
-    { id: '2', day: 'Monday', time: '10:00-11:00', subject: 'Algorithms', teacher: 'Prof. Johnson', room: 'CS-102' },
-    { id: '3', day: 'Tuesday', time: '09:00-10:00', subject: 'Database Systems', teacher: 'Dr. Williams', room: 'CS-103' },
-    { id: '4', day: 'Wednesday', time: '11:00-12:00', subject: 'Software Engineering', teacher: 'Prof. Brown', room: 'CS-104' },
-    { id: '5', day: 'Thursday', time: '14:00-15:00', subject: 'Computer Networks', teacher: 'Dr. Davis', room: 'CS-105' },
-    { id: '6', day: 'Friday', time: '10:00-11:00', subject: 'Machine Learning', teacher: 'Prof. Wilson', room: 'CS-106' },
-  ]);
+  const [timeSlots, setTimeSlots] = useState<TimetableSlot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // Get user's department and year, with fallbacks
+  const userDepartment = user.department || 'Computer Science';
+  const userYear = user.year || 1;
 
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newTimeSlot, setNewTimeSlot] = useState({
-    day: 'Monday',
-    time: '',
-    subject: '',
-    teacher: '',
-    room: ''
-  });
+  // Load timetable data and set up real-time subscription
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupTimetableData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log(`🔄 Loading timetable for ${userDepartment} Year ${userYear}...`);
+
+        // Test connection
+        const connectionTest = await testTimetableConnection();
+        if (!connectionTest) {
+          console.error('❌ Failed to connect to Realtime Database');
+          setError('Failed to connect to database. Showing offline data.');
+          setLoading(false);
+          return;
+        }
+
+        // Set up real-time subscription for user's department and year
+        unsubscribe = subscribeToTimetableSlots(userDepartment, userYear, (slots) => {
+          console.log(`📊 Received timetable slots update for ${userDepartment} Year ${userYear}:`, slots.length);
+          setTimeSlots(slots);
+          setLoading(false);
+        });
+
+      } catch (error) {
+        console.error('❌ Error setting up timetable data:', error);
+        setError('Error loading timetable data. Please refresh the page.');
+        setLoading(false);
+      }
+    };
+
+    setupTimetableData();
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        console.log('🧹 Cleaning up student timetable subscription');
+        unsubscribe();
+      }
+    };
+  }, [userDepartment, userYear]);
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
@@ -164,34 +194,20 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
     '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00'
   ];
 
-  const handleAddTimeSlot = () => {
-    if (!newTimeSlot.time || !newTimeSlot.subject || !newTimeSlot.teacher || !newTimeSlot.room) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    const timeSlot: TimeSlot = {
-      id: Date.now().toString(),
-      ...newTimeSlot
-    };
-
-    setTimeSlots([...timeSlots, timeSlot]);
-    setNewTimeSlot({ day: 'Monday', time: '', subject: '', teacher: '', room: '' });
-    setShowAddForm(false);
-  };
-
-  const handleDeleteTimeSlot = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this class?')) {
-      setTimeSlots(timeSlots.filter(slot => slot.id !== id));
-    }
-  };
-
   const getTimeSlotForCell = (day: string, time: string) => {
     return timeSlots.filter(slot => slot.day === day && slot.time === time);
   };
 
   return (
     <div style={containerStyle}>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <header style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <button style={backButtonStyle} onClick={onBack}>
@@ -213,154 +229,193 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
       </header>
 
       <main style={mainContentStyle}>
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
-              Weekly Schedule ({timeSlots.length} classes)
-            </h2>
+        {loading ? (
+          <div style={{
+            ...cardStyle,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '400px'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '50px',
+                height: '50px',
+                border: '4px solid #e2e8f0',
+                borderTop: '4px solid #667eea',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 1rem'
+              }}></div>
+              <p style={{ color: isDarkMode ? '#ccc' : '#666', fontSize: '1.1rem' }}>
+                Loading your timetable...
+              </p>
+            </div>
+          </div>
+        ) : error ? (
+          <div style={{
+            ...cardStyle,
+            textAlign: 'center',
+            padding: '3rem'
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+            <h3 style={{ color: isDarkMode ? '#fff' : '#333', marginBottom: '1rem' }}>
+              Connection Error
+            </h3>
+            <p style={{ color: isDarkMode ? '#ccc' : '#666', marginBottom: '2rem' }}>
+              {error}
+            </p>
             <button
               style={buttonStyle}
-              onClick={() => setShowAddForm(!showAddForm)}
+              onClick={() => window.location.reload()}
             >
-              {showAddForm ? '✕ Cancel' : '+ Add Class'}
+              🔄 Retry
             </button>
           </div>
-
-          {showAddForm && (
-            <div style={{
-              background: '#f8fafc',
-              borderRadius: '15px',
-              padding: '2rem',
-              marginBottom: '2rem',
-              border: '2px solid #e2e8f0'
-            }}>
-              <h3 style={{ margin: '0 0 1.5rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Add New Class</h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <select
-                  style={inputStyle}
-                  value={newTimeSlot.day}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, day: e.target.value })}
-                >
-                  {days.map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
-                
-                <select
-                  style={inputStyle}
-                  value={newTimeSlot.time}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, time: e.target.value })}
-                >
-                  <option value="">Select Time</option>
-                  {timeSlots_hours.map(time => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
-                
-                <input
-                  style={inputStyle}
-                  type="text"
-                  placeholder="Subject Name *"
-                  value={newTimeSlot.subject}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, subject: e.target.value })}
-                />
-                
-                <input
-                  style={inputStyle}
-                  type="text"
-                  placeholder="Teacher Name *"
-                  value={newTimeSlot.teacher}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, teacher: e.target.value })}
-                />
-                
-                <input
-                  style={inputStyle}
-                  type="text"
-                  placeholder="Room Number *"
-                  value={newTimeSlot.room}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, room: e.target.value })}
-                />
-              </div>
-              
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button style={buttonStyle} onClick={handleAddTimeSlot}>
-                  📅 Add Class
-                </button>
-                <button
-                  style={{ ...buttonStyle, background: '#6b7280' }}
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </button>
+        ) : (
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
+                My Weekly Schedule ({timeSlots.length} classes)
+              </h2>
+              <div style={{
+                background: isDarkMode ? '#374151' : '#f0f9ff',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                color: isDarkMode ? '#fff' : '#1e40af',
+                fontSize: '0.9rem',
+                fontWeight: '600'
+              }}>
+                {userDepartment} - Year {userYear}
               </div>
             </div>
-          )}
 
-          <div style={{ overflowX: 'auto' }}>
-            <div style={timetableGridStyle}>
-              {/* Header row */}
-              <div style={headerCellStyle}>Time</div>
-              {days.map(day => (
-                <div key={day} style={headerCellStyle}>{day}</div>
-              ))}
-              
-              {/* Time slots */}
-              {timeSlots_hours.map(time => (
-                <React.Fragment key={time}>
-                  <div style={headerCellStyle}>{time}</div>
+            {timeSlots.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem',
+                color: isDarkMode ? '#ccc' : '#666'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📅</div>
+                <h3 style={{ color: isDarkMode ? '#fff' : '#333', marginBottom: '1rem' }}>
+                  No Classes Scheduled
+                </h3>
+                <p>
+                  Your timetable for {userDepartment} Year {userYear} is currently empty.
+                  <br />
+                  Check back later or contact your administrator.
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <div style={timetableGridStyle}>
+                  {/* Header row */}
+                  <div style={headerCellStyle}>Time</div>
                   {days.map(day => (
-                    <div key={`${day}-${time}`} style={cellStyle}>
-                      {getTimeSlotForCell(day, time).map(slot => (
-                        <div
-                          key={slot.id}
-                          style={timeSlotStyle}
-                          onClick={() => handleDeleteTimeSlot(slot.id)}
-                          title="Click to delete"
-                        >
-                          <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                            {slot.subject}
-                          </div>
-                          <div>{slot.teacher}</div>
-                          <div>{slot.room}</div>
+                    <div key={day} style={headerCellStyle}>{day}</div>
+                  ))}
+
+                  {/* Time slots */}
+                  {timeSlots_hours.map(time => (
+                    <React.Fragment key={time}>
+                      <div style={headerCellStyle}>{time}</div>
+                      {days.map(day => (
+                        <div key={`${day}-${time}`} style={cellStyle}>
+                          {getTimeSlotForCell(day, time).map(slot => (
+                            <div
+                              key={slot.id}
+                              style={{
+                                ...timeSlotStyle,
+                                cursor: 'default'
+                              }}
+                              title={`${slot.subject} - ${slot.teacher} - ${slot.room}`}
+                            >
+                              <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                                {slot.subject}
+                              </div>
+                              <div>{slot.teacher}</div>
+                              <div>{slot.room}</div>
+                              {slot.semester && (
+                                <div style={{ fontSize: '0.6rem', marginTop: '0.25rem', opacity: 0.8 }}>
+                                  Semester {slot.semester}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       ))}
-                    </div>
+                    </React.Fragment>
                   ))}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-          
-          <div style={{ marginTop: '1rem', padding: '1rem', background: '#f0f9ff', borderRadius: '10px' }}>
-            <p style={{ margin: 0, color: '#1e40af', fontSize: '0.875rem' }}>
-              💡 <strong>Tip:</strong> Click on any class in the timetable to delete it. Use the "Add Class" button to add new classes to your schedule.
-            </p>
-          </div>
-        </div>
+                </div>
+              </div>
+            )}
 
-        {/* Quick Stats */}
-        <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 1rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Weekly Summary</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-            <div style={{ textAlign: 'center', padding: '1rem', background: '#f0f9ff', borderRadius: '10px' }}>
-              <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#3b82f6' }}>{timeSlots.length}</h4>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Total Classes</p>
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              background: isDarkMode ? '#374151' : '#f0f9ff',
+              borderRadius: '10px',
+              transition: 'background 0.3s ease'
+            }}>
+              <p style={{
+                margin: 0,
+                color: isDarkMode ? '#93c5fd' : '#1e40af',
+                fontSize: '0.875rem',
+                transition: 'color 0.3s ease'
+              }}>
+                📡 <strong>Real-time Updates:</strong> Your timetable is automatically updated when administrators make changes.
+                All data is synced with Firebase Realtime Database.
+              </p>
             </div>
-            <div style={{ textAlign: 'center', padding: '1rem', background: '#f0fdf4', borderRadius: '10px' }}>
-              <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#10b981' }}>{new Set(timeSlots.map(s => s.day)).size}</h4>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Active Days</p>
-            </div>
-            <div style={{ textAlign: 'center', padding: '1rem', background: '#fef3c7', borderRadius: '10px' }}>
-              <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#d97706' }}>{new Set(timeSlots.map(s => s.subject)).size}</h4>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Subjects</p>
-            </div>
-            <div style={{ textAlign: 'center', padding: '1rem', background: '#fce7f3', borderRadius: '10px' }}>
-              <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#be185d' }}>{new Set(timeSlots.map(s => s.teacher)).size}</h4>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Teachers</p>
+
+            {/* Quick Stats */}
+            <div style={cardStyle}>
+              <h3 style={{ margin: '0 0 1rem 0', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>Weekly Summary</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '1rem',
+                  background: isDarkMode ? '#1e3a8a' : '#f0f9ff',
+                  borderRadius: '10px',
+                  transition: 'background 0.3s ease'
+                }}>
+                  <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#3b82f6' }}>{timeSlots.length}</h4>
+                  <p style={{ margin: 0, color: isDarkMode ? '#ccc' : '#6b7280', fontSize: '0.875rem' }}>Total Classes</p>
+                </div>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '1rem',
+                  background: isDarkMode ? '#064e3b' : '#f0fdf4',
+                  borderRadius: '10px',
+                  transition: 'background 0.3s ease'
+                }}>
+                  <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#10b981' }}>{new Set(timeSlots.map(s => s.day)).size}</h4>
+                  <p style={{ margin: 0, color: isDarkMode ? '#ccc' : '#6b7280', fontSize: '0.875rem' }}>Active Days</p>
+                </div>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '1rem',
+                  background: isDarkMode ? '#92400e' : '#fef3c7',
+                  borderRadius: '10px',
+                  transition: 'background 0.3s ease'
+                }}>
+                  <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#d97706' }}>{new Set(timeSlots.map(s => s.subject)).size}</h4>
+                  <p style={{ margin: 0, color: isDarkMode ? '#ccc' : '#6b7280', fontSize: '0.875rem' }}>Subjects</p>
+                </div>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '1rem',
+                  background: isDarkMode ? '#831843' : '#fce7f3',
+                  borderRadius: '10px',
+                  transition: 'background 0.3s ease'
+                }}>
+                  <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#be185d' }}>{new Set(timeSlots.map(s => s.teacher)).size}</h4>
+                  <p style={{ margin: 0, color: isDarkMode ? '#ccc' : '#6b7280', fontSize: '0.875rem' }}>Teachers</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

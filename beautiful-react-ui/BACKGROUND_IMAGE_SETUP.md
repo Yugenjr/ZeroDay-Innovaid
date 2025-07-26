@@ -1,8 +1,8 @@
-# 🏫 College Building Background Setup
+# 🏫 SECE College Building Background Setup - Innovaid
 
-## 📸 Adding Your College Building Image
+## 📸 Adding Your SECE College Building Image
 
-To replace the current background with your specific college building image, follow these steps:
+To replace the current background with your specific SECE college building image, follow these steps:
 
 ### Step 1: Save Your Image
 1. Save your college building image as `college-building.jpg` in the `public/` folder
