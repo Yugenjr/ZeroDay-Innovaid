@@ -1,6 +1,6 @@
 # INNOVAID FOR SECE
 
-This project is a beautiful React UI application that demonstrates the use of functional components and TypeScript. It includes a simple button component and serves as a foundation for building more complex UIs.
+This application is a campus utility software with all essential features with all functionalities for student as well as admin . 
 
 ## Getting Started
 
