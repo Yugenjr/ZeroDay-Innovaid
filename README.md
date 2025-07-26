@@ -70,6 +70,14 @@ Maries Hari Bose B - FireBase
 
 ### have a wholesome experience of using our design !!
 
+Student login: karthicknaveen@sece.ac.in
+Password: karthick123
+
+admin login: yugendra.st@sece.ac.in
+password : yugenjr847
+
+### use these for testing alone . thank you .
+
 
 
 
