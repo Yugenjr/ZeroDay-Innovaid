@@ -5,7 +5,7 @@ import AnnouncementManagement from './admin/AnnouncementManagement';
 import LostFoundManagement from './admin/LostFoundManagement';
 import TimetableManagement from './admin/TimetableManagement';
 import HostelManagement from './admin/HostelManagement';
-
+import PollsFormsManagement from './admin/PollsFormsManagement';
 import RegistrationManagement from './admin/RegistrationManagement';
 import AdminTechEvents from './admin/AdminTechEvents';
 // @ts-ignore
@@ -234,6 +234,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       badge: getPendingComplaintsCount()
     },
     {
+      icon: '📊',
+      title: 'Polls & Feedback',
+      description: 'Create polls, collect feedback, and analyze student responses.',
+      key: 'polls'
+    },
+    {
       icon: '📚',
       title: 'Library Management',
       description: 'Oversee book inventory, reservations, and library resource allocation.',
@@ -342,7 +348,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         return <TimetableManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'hostel':
         return <HostelManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} complaints={getSharedComplaints()} />;
-
+      case 'polls':
+        return <PollsFormsManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={false} />;
       case 'eventRegistrations':
         console.log('📝 Loading Registration Management component');
         return <RegistrationManagement user={user} onBack={handleBackToDashboard} />;

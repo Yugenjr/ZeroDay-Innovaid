@@ -6,6 +6,7 @@ import StudentTimetable from './student/StudentTimetable';
 import StudentHostelComplaints from './student/StudentHostelComplaints';
 import SkillExchange from './student/SkillExchange';
 import TechUpdates from './student/TechUpdates';
+import StudentPollsForms from './student/StudentPollsForms';
 import {
   Notification,
   subscribeToNotifications,
@@ -214,6 +215,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
       key: 'hostel'
     },
     {
+      icon: '📊',
+      title: 'Polls & Feedback',
+      description: 'Participate in campus polls and provide feedback on various topics.',
+      key: 'polls'
+    },
+    {
       icon: '🎓',
       title: 'Skill Exchange',
       description: 'Create courses, teach skills, and learn from peers in collaborative sessions.',
@@ -255,6 +262,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         return <StudentHostelComplaints user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'skillexchange':
         return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
+      case 'polls':
+        return <StudentPollsForms user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'techupdates':
         return <TechUpdates user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'profile':
