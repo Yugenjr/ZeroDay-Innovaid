@@ -11,11 +11,68 @@ import StudentPollsForms from './student/StudentPollsForms';
 import {
   Notification,
   subscribeToNotifications,
-  getRecentNotifications,
-  initializeNotificationSystem
+  getRecentNotifications
 } from '../firebase/notifications';
 
+// Error Boundary Component for UserDashboard
+class UserDashboardErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('❌ UserDashboard Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          color: 'white'
+        }}>
+          <h2 style={{ color: '#fff', marginBottom: '1rem' }}>
+            ⚠️ Something went wrong
+          </h2>
+          <p style={{ color: '#f8f9fa', marginBottom: '1rem' }}>
+            An error occurred in the student dashboard. Please refresh the page.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#fff',
+              color: '#667eea',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            🔄 Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 interface UserDashboardProps {
   user: User;
@@ -33,31 +90,55 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   // Initialize notification system and subscribe to real-time updates
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
 
     const setupNotifications = async () => {
       try {
-        // Initialize notification system (request permissions, etc.)
-        unsubscribe = await initializeNotificationSystem(user.uid);
+        if (!user?.uid) {
+          console.warn('⚠️ No user ID available for notifications');
+          return;
+        }
 
-        // Subscribe to real-time notifications
+        console.log('🔔 Setting up notifications for user:', user.uid);
+
+        // Subscribe to real-time notifications with error handling
         const notificationUnsubscribe = subscribeToNotifications(user.uid, (newNotifications) => {
-          setNotifications(newNotifications.slice(0, 5)); // Show latest 5 notifications
-          // Temporarily disable notification count to remove the "1" badge
-          setNotificationCount(0); // newNotifications.filter(n => !n.isRead).length
+          try {
+            if (isMounted) {
+              console.log('📬 Received notifications:', newNotifications.length);
+              setNotifications(newNotifications.slice(0, 5)); // Show latest 5 notifications
+              // Temporarily disable notification count to remove the "1" badge
+              setNotificationCount(0); // newNotifications.filter(n => !n.isRead).length
+            }
+          } catch (callbackError) {
+            console.error('❌ Error in notification callback:', callbackError);
+          }
         });
 
         // Store the unsubscribe function
         unsubscribe = notificationUnsubscribe;
+        console.log('✅ Notification subscription set up successfully');
+
       } catch (error) {
-        console.error('Error setting up notifications:', error);
+        console.error('❌ Error setting up notifications:', error);
+
         // Fallback to getting recent notifications without real-time updates
         try {
-          const recentNotifications = await getRecentNotifications(user.uid, 5);
-          setNotifications(recentNotifications);
-          // Temporarily disable notification count to remove the "1" badge
-          setNotificationCount(0); // recentNotifications.filter(n => !n.isRead).length
+          if (isMounted && user?.uid) {
+            console.log('🔄 Falling back to static notifications');
+            const recentNotifications = await getRecentNotifications(user.uid, 5);
+            if (isMounted) {
+              setNotifications(recentNotifications);
+              // Temporarily disable notification count to remove the "1" badge
+              setNotificationCount(0); // recentNotifications.filter(n => !n.isRead).length
+            }
+          }
         } catch (fallbackError) {
-          console.error('Error getting recent notifications:', fallbackError);
+          console.error('❌ Error getting recent notifications:', fallbackError);
+          if (isMounted) {
+            setNotifications([]);
+            setNotificationCount(0);
+          }
         }
       }
     };
@@ -66,8 +147,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
 
     // Cleanup subscription on unmount
     return () => {
+      isMounted = false;
       if (unsubscribe) {
-        unsubscribe();
+        try {
+          unsubscribe();
+          console.log('🧹 Notification subscription cleaned up');
+        } catch (cleanupError) {
+          console.warn('⚠️ Error during notification cleanup:', cleanupError);
+        }
       }
     };
   }, [user.uid]);
@@ -1106,4 +1193,11 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   );
 };
 
-export default UserDashboard;
+// Wrap UserDashboard with ErrorBoundary
+const UserDashboardWithErrorBoundary: React.FC<UserDashboardProps> = (props) => (
+  <UserDashboardErrorBoundary>
+    <UserDashboard {...props} />
+  </UserDashboardErrorBoundary>
+);
+
+export default UserDashboardWithErrorBoundary;

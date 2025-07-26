@@ -13,6 +13,64 @@ import AdminTechEvents from './admin/AdminTechEvents';
 import { getAllRegistrations } from '../firebase/registrations';
 import { getAllStudents, AppUser, subscribeToStudents } from '../firebase/auth';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('❌ AdminDashboard Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          background: '#f8f9fa',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column'
+        }}>
+          <h2 style={{ color: '#dc3545', marginBottom: '1rem' }}>
+            ⚠️ Something went wrong
+          </h2>
+          <p style={{ color: '#6c757d', marginBottom: '1rem' }}>
+            An error occurred in the admin dashboard. Please refresh the page.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 interface AdminDashboardProps {
   user: User;
   onLogout: () => void;
@@ -67,9 +125,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         const pendingCount = result.registrations.filter((reg: any) => reg.status === 'pending').length;
         setPendingRegistrationsCount(pendingCount);
         console.log('📊 Pending registrations count:', pendingCount);
+      } else {
+        console.warn('⚠️ Failed to load registrations:', result.message || 'Unknown error');
+        setPendingRegistrationsCount(0);
       }
     } catch (error) {
-      console.error('Error loading pending registrations count:', error);
+      console.error('❌ Error loading pending registrations count:', error);
+      setPendingRegistrationsCount(0);
     }
   };
 
@@ -269,34 +331,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   // Set up real-time listener for students
   const setupStudentsListener = () => {
-    console.log('🔄 AdminDashboard: Setting up real-time students listener...');
-    setLoadingStudents(true);
+    try {
+      console.log('🔄 AdminDashboard: Setting up real-time students listener...');
+      setLoadingStudents(true);
 
-    // Clean up existing listener if any
-    if (studentsListener) {
-      console.log('🧹 Cleaning up existing listener');
-      studentsListener();
-      setStudentsListener(null);
-    }
+      // Clean up existing listener if any
+      if (studentsListener) {
+        console.log('🧹 Cleaning up existing listener');
+        try {
+          studentsListener();
+        } catch (cleanupError) {
+          console.warn('⚠️ Error during listener cleanup:', cleanupError);
+        }
+        setStudentsListener(null);
+      }
 
-    // Clear current students to show loading state
-    setStudents([]);
+      // Clear current students to show loading state
+      setStudents([]);
 
-    // Set up new real-time listener
-    const unsubscribe = subscribeToStudents((studentsData) => {
-      console.log('📊 AdminDashboard: Received real-time students update');
-      console.log(`📊 Previous student count: ${students.length}`);
-      console.log(`📊 New student count: ${studentsData.length}`);
-      console.log('📊 Previous students:', students.map(s => s.name).join(', '));
-      console.log('📊 New students:', studentsData.map(s => s.name).join(', '));
+      // Set up new real-time listener with error handling
+      const unsubscribe = subscribeToStudents((studentsData) => {
+        try {
+          console.log('📊 AdminDashboard: Received real-time students update');
+          console.log(`📊 New student count: ${studentsData.length}`);
 
-      setStudents(studentsData);
+          setStudents(studentsData);
+          setLoadingStudents(false);
+          console.log(`✅ AdminDashboard: Updated state with ${studentsData.length} students`);
+        } catch (updateError) {
+          console.error('❌ Error updating students state:', updateError);
+          setLoadingStudents(false);
+        }
+      });
+
+      setStudentsListener(() => unsubscribe);
+      console.log('🎯 AdminDashboard: Real-time listener set up successfully');
+    } catch (error) {
+      console.error('❌ Error setting up students listener:', error);
       setLoadingStudents(false);
-      console.log(`✅ AdminDashboard: Updated state with ${studentsData.length} students`);
-    });
-
-    setStudentsListener(() => unsubscribe);
-    console.log('🎯 AdminDashboard: Real-time listener set up successfully');
+      setStudents([]);
+    }
   };
 
   // Force refresh students data
@@ -310,7 +384,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const cleanupStudentsListener = () => {
     if (studentsListener) {
       console.log('🧹 AdminDashboard: Cleaning up students listener');
-      studentsListener();
+      try {
+        studentsListener();
+      } catch (error) {
+        console.warn('⚠️ Error during students listener cleanup:', error);
+      }
       setStudentsListener(null);
     }
   };
@@ -509,7 +587,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </div>
 
         <div style={managementGridStyle}>
-          {managementSections.map((section, index) => (
+          {managementSections.map((section) => (
             <div
               key={section.title}
               style={managementCardStyle}
@@ -580,4 +658,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   );
 };
 
-export default AdminDashboard;
+// Wrap AdminDashboard with ErrorBoundary
+const AdminDashboardWithErrorBoundary: React.FC<AdminDashboardProps> = (props) => (
+  <ErrorBoundary>
+    <AdminDashboard {...props} />
+  </ErrorBoundary>
+);
+
+export default AdminDashboardWithErrorBoundary;

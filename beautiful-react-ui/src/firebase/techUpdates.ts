@@ -399,8 +399,8 @@ export const markTechUpdateAsRead = async (updateId: string, userId: string): Pr
       const notificationSnapshot = await getDocs(notificationQuery);
 
       if (!notificationSnapshot.empty) {
-        const notificationDocRef = notificationSnapshot.docs[0];
-        await updateDoc(notificationDocRef.ref, {
+        const notificationDoc = notificationSnapshot.docs[0];
+        await updateDoc(notificationDoc.ref, {
           isRead: true,
           readAt: new Date().toISOString()
         });

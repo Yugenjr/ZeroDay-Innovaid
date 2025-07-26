@@ -133,41 +133,92 @@ export const subscribeToNotifications = (
   callback: (notifications: Notification[]) => void
 ) => {
   try {
-    let q;
-    if (userId) {
-      // Get notifications for specific user OR notifications for all users
-      q = query(
-        collection(db, NOTIFICATIONS_COLLECTION),
-        where('userId', 'in', [userId, null]),
-        orderBy('createdAt', 'desc')
-      );
-    } else {
-      // Get all notifications for all users
-      q = query(
-        collection(db, NOTIFICATIONS_COLLECTION),
-        where('userId', '==', null),
-        orderBy('createdAt', 'desc')
-      );
+    if (!userId) {
+      console.warn('⚠️ No userId provided for notification subscription');
+      callback([]);
+      return () => {}; // Return empty unsubscribe function
     }
 
-    return onSnapshot(q, (querySnapshot) => {
-      const notifications = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          metadata: {
-            ...data.metadata,
-            eventDate: data.metadata?.eventDate?.toDate() || null
-          }
-        } as Notification;
-      });
-      callback(notifications);
+    // Create two separate queries to avoid Firebase 'in' operator issues with null
+    const userSpecificQuery = query(
+      collection(db, NOTIFICATIONS_COLLECTION),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const globalQuery = query(
+      collection(db, NOTIFICATIONS_COLLECTION),
+      where('userId', '==', null),
+      orderBy('createdAt', 'desc')
+    );
+
+    let userNotifications: Notification[] = [];
+    let globalNotifications: Notification[] = [];
+    let unsubscribeUser: (() => void) | null = null;
+    let unsubscribeGlobal: (() => void) | null = null;
+
+    const combineAndCallback = () => {
+      const allNotifications = [...userNotifications, ...globalNotifications]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      callback(allNotifications);
+    };
+
+    // Subscribe to user-specific notifications
+    unsubscribeUser = onSnapshot(userSpecificQuery, (querySnapshot) => {
+      try {
+        userNotifications = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            metadata: {
+              ...data.metadata,
+              eventDate: data.metadata?.eventDate?.toDate() || null
+            }
+          } as Notification;
+        });
+        combineAndCallback();
+      } catch (error) {
+        console.error('❌ Error processing user notifications:', error);
+      }
+    }, (error) => {
+      console.error('❌ Error in user notifications subscription:', error);
     });
+
+    // Subscribe to global notifications
+    unsubscribeGlobal = onSnapshot(globalQuery, (querySnapshot) => {
+      try {
+        globalNotifications = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            metadata: {
+              ...data.metadata,
+              eventDate: data.metadata?.eventDate?.toDate() || null
+            }
+          } as Notification;
+        });
+        combineAndCallback();
+      } catch (error) {
+        console.error('❌ Error processing global notifications:', error);
+      }
+    }, (error) => {
+      console.error('❌ Error in global notifications subscription:', error);
+    });
+
+    // Return combined unsubscribe function
+    return () => {
+      if (unsubscribeUser) unsubscribeUser();
+      if (unsubscribeGlobal) unsubscribeGlobal();
+    };
+
   } catch (error) {
-    console.error('❌ Error subscribing to notifications:', error);
-    throw error;
+    console.error('❌ Error setting up notification subscriptions:', error);
+    callback([]);
+    return () => {}; // Return empty unsubscribe function
   }
 };
 

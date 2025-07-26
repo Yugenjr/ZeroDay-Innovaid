@@ -240,18 +240,34 @@ const SimpleLogin: React.FC = () => {
         const { getCurrentUserData } = await import('../firebase/auth');
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            // User is signed in
-            const userData = await getCurrentUserData(firebaseUser);
-            if (userData) {
-              setCurrentUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
+          try {
+            if (firebaseUser) {
+              // User is signed in
+              console.log('🔐 Firebase user authenticated:', firebaseUser.uid);
+              const userData = await getCurrentUserData(firebaseUser);
+              if (userData) {
+                console.log('✅ User data loaded:', userData.name);
+                setCurrentUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+              } else {
+                console.warn('⚠️ No user data found for authenticated user');
+              }
+            } else {
+              // User is signed out
+              console.log('🔓 User signed out');
+              setCurrentUser(null);
+              localStorage.removeItem('user');
             }
-          } else {
-            // User is signed out
+          } catch (error) {
+            console.error('❌ Error in auth state change handler:', error);
+            // Don't set user state if there's an error
             setCurrentUser(null);
             localStorage.removeItem('user');
           }
+        }, (error) => {
+          console.error('❌ Firebase auth state change error:', error);
+          setCurrentUser(null);
+          localStorage.removeItem('user');
         });
 
         return unsubscribe;
