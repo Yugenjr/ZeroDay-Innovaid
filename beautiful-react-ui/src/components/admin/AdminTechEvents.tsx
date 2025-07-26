@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../../types/User';
 import {
-  TechEvent,
-  createTechEvent,
-  updateTechEvent,
-  deleteTechEvent,
-  subscribeTechEvents
-} from '../../firebase/techEvents';
+  RealtimeTechEvent,
+  createRealtimeTechEvent,
+  updateRealtimeTechEvent,
+  deleteRealtimeTechEvent,
+  subscribeToRealtimeTechEvents,
+  testRealtimeConnection,
+  createTestTechEvent
+} from '../../firebase/realtimeTechEvents';
 import { initializeEmailJS } from '../../firebase/emailNotifications';
 
 interface AdminTechEventsProps {
@@ -16,10 +18,10 @@ interface AdminTechEventsProps {
 }
 
 const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogout }) => {
-  const [events, setEvents] = useState<TechEvent[]>([]);
+  const [events, setEvents] = useState<RealtimeTechEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<TechEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<RealtimeTechEvent | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     details: '',
@@ -27,20 +29,30 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
     venue: '',
     date: '',
     requirements: '',
-    type: 'event' as TechEvent['type'],
+    type: 'event' as RealtimeTechEvent['type'],
     registrationLink: '',
     deadline: '',
     tags: '',
-    priority: 'medium' as TechEvent['priority']
+    priority: 'medium' as RealtimeTechEvent['priority']
   });
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // Test Realtime Database connection
+    testRealtimeConnection().then((connected) => {
+      if (connected) {
+        console.log('✅ Realtime Database connected successfully!');
+      } else {
+        console.error('❌ Realtime Database connection failed!');
+      }
+    });
+
     // Initialize EmailJS for email notifications
     initializeEmailJS();
 
-    const unsubscribe = subscribeTechEvents((updatedEvents) => {
+    const unsubscribe = subscribeToRealtimeTechEvents((updatedEvents) => {
+      console.log('🔧 Admin side: Received tech events update from Realtime DB:', updatedEvents.length, 'events');
       setEvents(updatedEvents);
       setLoading(false);
     });
@@ -67,18 +79,18 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
     setShowForm(false);
   };
 
-  const handleEdit = (event: TechEvent) => {
+  const handleEdit = (event: RealtimeTechEvent) => {
     setEditingEvent(event);
     setFormData({
       title: event.title,
       details: event.details,
       place: event.place,
       venue: event.venue,
-      date: event.date.toISOString().slice(0, 16),
+      date: event.date.slice(0, 16), // Already ISO string in Realtime DB
       requirements: event.requirements,
       type: event.type,
       registrationLink: event.registrationLink || '',
-      deadline: event.deadline ? event.deadline.toISOString().slice(0, 16) : '',
+      deadline: event.deadline ? event.deadline.slice(0, 16) : '',
       tags: event.tags.join(', '),
       priority: event.priority
     });
@@ -102,11 +114,11 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
         details: formData.details,
         place: formData.place,
         venue: formData.venue,
-        date: new Date(formData.date),
+        date: formData.date, // Keep as ISO string for Realtime DB
         requirements: formData.requirements,
         type: formData.type,
         registrationLink: formData.registrationLink || undefined,
-        deadline: formData.deadline ? new Date(formData.deadline) : undefined,
+        deadline: formData.deadline || undefined,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         priority: formData.priority,
         createdBy: user.uid,
@@ -114,13 +126,16 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
       };
 
       if (editingEvent) {
-        await updateTechEvent(editingEvent.id!, eventData, posterFile || undefined);
+        console.log('🔧 Admin: Updating tech event in Realtime DB:', eventData.title);
+        await updateRealtimeTechEvent(editingEvent.id!, eventData, posterFile || undefined);
         clearTimeout(timeoutId);
-        alert('Event updated successfully!');
+        alert('Event updated successfully in Realtime Database!');
       } else {
-        await createTechEvent(eventData, posterFile || undefined);
+        console.log('🔧 Admin: Creating new tech event in Realtime DB:', eventData.title);
+        const eventId = await createRealtimeTechEvent(eventData, posterFile || undefined);
+        console.log('✅ Admin: Tech event created in Realtime DB with ID:', eventId);
         clearTimeout(timeoutId);
-        alert(`🎉 Event "${eventData.title}" created successfully!\n\n📧 Notifications are being sent in the background.`);
+        alert(`🎉 Event "${eventData.title}" created successfully in Realtime Database!\n\n📧 Notifications are being sent in the background.`);
       }
 
       setShowForm(false);
@@ -137,12 +152,27 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
   const handleDelete = async (eventId: string) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
       try {
-        await deleteTechEvent(eventId);
-        alert('Event deleted successfully!');
+        await deleteRealtimeTechEvent(eventId);
+        alert('Event deleted successfully from Realtime Database!');
       } catch (error) {
-        console.error('Error deleting event:', error);
+        console.error('Error deleting event from Realtime Database:', error);
         alert('Error deleting event. Please try again.');
       }
+    }
+  };
+
+  const handleTestFirebase = async () => {
+    console.log('🧪 Testing Realtime Database connection and creating test event...');
+    const connected = await testRealtimeConnection();
+    if (connected) {
+      try {
+        const testEventId = await createTestTechEvent();
+        alert(`✅ Realtime Database test successful!\n\n🎉 Test event created with ID: ${testEventId}\n\nCheck both admin and student dashboards for real-time updates!`);
+      } catch (error) {
+        alert('✅ Realtime Database connection works, but test event creation failed. Check console for details.');
+      }
+    } else {
+      alert('❌ Realtime Database connection test failed. Check console for details.');
     }
   };
 
@@ -243,7 +273,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
                   </label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as TechEvent['type'] })}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as RealtimeTechEvent['type'] })}
                     required
                     style={{
                       width: '100%',
@@ -267,7 +297,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
                   </label>
                   <select
                     value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as TechEvent['priority'] })}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as RealtimeTechEvent['priority'] })}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -557,6 +587,20 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
           </button>
           <button
             style={{
+              background: '#f59e0b',
+              color: 'white',
+              border: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+            onClick={handleTestFirebase}
+          >
+🧪 Test Realtime DB
+          </button>
+          <button
+            style={{
               background: '#ef4444',
               color: 'white',
               border: 'none',
@@ -667,10 +711,10 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
 
                 {/* Event Meta */}
                 <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1rem' }}>
-                  <div>📅 {event.date.toLocaleDateString()}</div>
+                  <div>📅 {new Date(event.date).toLocaleDateString()}</div>
                   <div>📍 {event.venue}, {event.place}</div>
                   {event.deadline && (
-                    <div style={{ color: '#ef4444' }}>⏰ Deadline: {event.deadline.toLocaleDateString()}</div>
+                    <div style={{ color: '#ef4444' }}>⏰ Deadline: {new Date(event.deadline).toLocaleDateString()}</div>
                   )}
                 </div>
 

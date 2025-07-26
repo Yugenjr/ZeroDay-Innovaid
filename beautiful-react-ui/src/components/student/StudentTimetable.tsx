@@ -198,7 +198,6 @@ const StudentTimetable: React.FC<StudentTimetableProps> = ({ user, onBack, onLog
             ← Back to Dashboard
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
-            <span style={{ fontSize: '2rem' }}>📅</span>
             My Timetable
           </div>
         </div>

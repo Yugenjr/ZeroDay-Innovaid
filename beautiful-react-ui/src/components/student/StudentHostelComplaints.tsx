@@ -272,7 +272,6 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
               ← Back to Dashboard
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
-              <span style={{ fontSize: '2rem' }}>🏠</span>
               Hostel Complaints
             </div>
           </div>
@@ -403,7 +402,6 @@ const StudentHostelComplaints: React.FC<StudentHostelComplaintsProps> = ({ user,
             ← Back to Dashboard
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>
-            <span style={{ fontSize: '2rem' }}>🏠</span>
             Hostel Complaints
           </div>
         </div>

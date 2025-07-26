@@ -264,7 +264,6 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
             ← Back to Dashboard
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
-            <span style={{ fontSize: '2rem' }}>🔍</span>
             Lost & Found
           </div>
         </div>
@@ -488,7 +487,7 @@ const StudentLostFound: React.FC<StudentLostFoundProps> = ({ user, onBack, onLog
                     color: '#0369a1',
                     marginTop: '1rem'
                   }}>
-                    💡 <strong>Contact:</strong> {item.studentEmail}
+                    <strong>Contact:</strong> {item.studentEmail}
                     {item.status === 'resolved' && <span style={{ color: '#059669', fontWeight: 'bold' }}> (FOUND!)</span>}
                     {item.status === 'claimed' && <span style={{ color: '#059669', fontWeight: 'bold' }}> (CLAIMED!)</span>}
                   </div>

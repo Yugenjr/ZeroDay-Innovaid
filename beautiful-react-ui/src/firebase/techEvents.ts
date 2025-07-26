@@ -67,7 +67,9 @@ export const createTechEvent = async (eventData: Omit<TechEvent, 'id' | 'created
       deadline: eventData.deadline ? Timestamp.fromDate(eventData.deadline) : null
     };
 
+    console.log('🔥 Firebase: Creating tech event in Firestore collection:', COLLECTION_NAME);
     const docRef = await addDoc(collection(db, COLLECTION_NAME), docData);
+    console.log('✅ Firebase: Tech event created with document ID:', docRef.id);
 
     // Create the tech event object for notification
     const createdEvent: TechEvent = {
@@ -233,6 +235,7 @@ export const subscribeTechEvents = (callback: (events: TechEvent[]) => void) => 
   );
 
   return onSnapshot(q, (querySnapshot) => {
+    console.log('🔄 Firebase: Real-time update received for tech events, document count:', querySnapshot.docs.length);
     const events = querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -244,6 +247,7 @@ export const subscribeTechEvents = (callback: (events: TechEvent[]) => void) => 
         updatedAt: data.updatedAt?.toDate() || new Date()
       } as TechEvent;
     });
+    console.log('📊 Firebase: Processed events for callback:', events.map(e => e.title));
     callback(events);
   });
 };

@@ -6,7 +6,7 @@ import LostFoundManagement from './admin/LostFoundManagement';
 import TimetableManagement from './admin/TimetableManagement';
 import HostelManagement from './admin/HostelManagement';
 import PollsFormsManagement from './admin/PollsFormsManagement';
-import TechUpdatesManagement from './admin/TechUpdatesManagement';
+
 import RegistrationManagement from './admin/RegistrationManagement';
 import AdminTechEvents from './admin/AdminTechEvents';
 // @ts-ignore
@@ -226,22 +226,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     border: '1px solid rgba(255, 255, 255, 0.2)'
   };
 
-  const statsGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '1.5rem',
-    marginBottom: '2rem'
-  };
 
-  const statCardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '15px',
-    padding: '1.5rem',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    borderTop: '4px solid #f093fb'
-  };
 
   const managementGridStyle: React.CSSProperties = {
     display: 'grid',
@@ -302,12 +287,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       description: 'Create polls, collect feedback, and analyze student responses.',
       key: 'polls'
     },
-    {
-      icon: '�',
-      title: 'Tech Updates',
-      description: 'Create and manage tech updates with notifications and email alerts.',
-      key: 'techUpdates'
-    },
+
     {
       icon: '�📚',
       title: 'Library Management',
@@ -434,8 +414,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         return <HostelManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} complaints={getSharedComplaints()} />;
       case 'polls':
         return <PollsFormsManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={false} />;
-      case 'techUpdates':
-        return <TechUpdatesManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={false} />;
+
       case 'eventRegistrations':
         console.log('📝 Loading Registration Management component');
         return <RegistrationManagement user={user} onBack={handleBackToDashboard} />;
@@ -496,95 +475,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           </p>
         </div>
 
-        <div style={statsGridStyle}>
-          <div style={statCardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '10px',
-                background: 'rgba(102, 126, 234, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem'
-              }}>
-                👥
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>
-                📈 +12%
-              </div>
-            </div>
-            <h3 style={{ fontSize: '2rem', fontWeight: '700', color: '#333', margin: '0 0 0.25rem 0' }}>2,847</h3>
-            <p style={{ color: '#666', margin: 0, fontSize: '0.875rem' }}>Active Users</p>
-          </div>
 
-          <div style={statCardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '10px',
-                background: 'rgba(102, 126, 234, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem'
-              }}>
-                📊
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>
-                📈 +8%
-              </div>
-            </div>
-            <h3 style={{ fontSize: '2rem', fontWeight: '700', color: '#333', margin: '0 0 0.25rem 0' }}>98.5%</h3>
-            <p style={{ color: '#666', margin: 0, fontSize: '0.875rem' }}>System Uptime</p>
-          </div>
-
-          <div style={statCardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '10px',
-                background: 'rgba(102, 126, 234, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem'
-              }}>
-                📋
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>
-                📈 +15%
-              </div>
-            </div>
-            <h3 style={{ fontSize: '2rem', fontWeight: '700', color: '#333', margin: '0 0 0.25rem 0' }}>1,234</h3>
-            <p style={{ color: '#666', margin: 0, fontSize: '0.875rem' }}>Service Requests</p>
-          </div>
-
-          <div style={statCardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '10px',
-                background: 'rgba(102, 126, 234, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem'
-              }}>
-                ⚠️
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', fontWeight: '600', color: '#f59e0b' }}>
-                ⚠️ 3 pending
-              </div>
-            </div>
-            <h3 style={{ fontSize: '2rem', fontWeight: '700', color: '#333', margin: '0 0 0.25rem 0' }}>97</h3>
-            <p style={{ color: '#666', margin: 0, fontSize: '0.875rem' }}>Issues Resolved</p>
-          </div>
-        </div>
 
         <div style={managementGridStyle}>
           {managementSections.map((section) => (

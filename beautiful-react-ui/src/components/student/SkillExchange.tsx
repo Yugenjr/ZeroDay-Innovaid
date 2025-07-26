@@ -234,7 +234,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout, i
             ← Back
           </button>
           <h1 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem', transition: 'color 0.3s ease' }}>
-            🎓 Skill Exchange Marketplace
+            Skill Exchange Marketplace
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -268,7 +268,7 @@ const SkillExchange: React.FC<SkillExchangeProps> = ({ user, onBack, onLogout, i
                 style={tabStyle(activeTab === 'browse')}
                 onClick={() => setActiveTab('browse')}
               >
-                🔍 Browse Courses
+                Browse Courses
               </button>
               <button
                 style={tabStyle(activeTab === 'my-courses')}

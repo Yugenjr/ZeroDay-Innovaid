@@ -1,24 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../../types/User';
-import { TechEvent, getTechEvents, getTechEventsByType, searchTechEvents, subscribeTechEvents } from '../../firebase/techEvents';
+import { RealtimeTechEvent, subscribeToRealtimeTechEvents, testRealtimeConnection } from '../../firebase/realtimeTechEvents';
 
 interface TechUpdatesProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
+  isDarkMode?: boolean;
 }
 
-const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => {
-  const [events, setEvents] = useState<TechEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<TechEvent[]>([]);
+const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout, isDarkMode = false }) => {
+  const [events, setEvents] = useState<RealtimeTechEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<RealtimeTechEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState<'all' | TechEvent['type']>('all');
+  const [selectedType, setSelectedType] = useState<'all' | RealtimeTechEvent['type']>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState<TechEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<RealtimeTechEvent | null>(null);
 
   useEffect(() => {
-    // Subscribe to real-time updates
-    const unsubscribe = subscribeTechEvents((updatedEvents) => {
+    // Test Realtime Database connection
+    testRealtimeConnection().then((connected) => {
+      if (connected) {
+        console.log('✅ Student side: Realtime Database connected successfully!');
+      } else {
+        console.error('❌ Student side: Realtime Database connection failed!');
+      }
+    });
+
+    // Subscribe to real-time updates from Realtime Database
+    const unsubscribe = subscribeToRealtimeTechEvents((updatedEvents) => {
+      console.log('📱 Student side: Received tech events update from Realtime DB:', updatedEvents.length, 'events');
       setEvents(updatedEvents);
       setLoading(false);
     });
@@ -40,15 +51,20 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
 
     // Filter by search term
     if (searchTerm.trim()) {
-      const searchResults = await searchTechEvents(searchTerm);
-      const searchIds = searchResults.map(event => event.id);
-      filtered = filtered.filter(event => searchIds.includes(event.id));
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(term) ||
+        event.details.toLowerCase().includes(term) ||
+        event.place.toLowerCase().includes(term) ||
+        event.venue.toLowerCase().includes(term) ||
+        event.tags.some(tag => tag.toLowerCase().includes(term))
+      );
     }
 
     setFilteredEvents(filtered);
   };
 
-  const handleTypeFilter = async (type: 'all' | TechEvent['type']) => {
+  const handleTypeFilter = async (type: 'all' | RealtimeTechEvent['type']) => {
     setSelectedType(type);
     setSearchTerm('');
   };
@@ -58,7 +74,8 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
     setSelectedType('all');
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -69,7 +86,7 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
     });
   };
 
-  const getEventTypeColor = (type: TechEvent['type']) => {
+  const getEventTypeColor = (type: RealtimeTechEvent['type']) => {
     switch (type) {
       case 'hackathon': return '#ff6b6b';
       case 'internship': return '#4ecdc4';
@@ -79,7 +96,7 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
     }
   };
 
-  const getEventTypeIcon = (type: TechEvent['type']) => {
+  const getEventTypeIcon = (type: RealtimeTechEvent['type']) => {
     switch (type) {
       case 'hackathon': return '💻';
       case 'internship': return '🏢';
@@ -91,12 +108,16 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    background: isDarkMode
+      ? 'linear-gradient(135deg, #1a202c 0%, #2d3748 100%)'
+      : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
     fontFamily: 'Arial, sans-serif'
   };
 
   const headerStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(45, 55, 72, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     padding: '1rem 2rem',
     display: 'flex',
@@ -122,13 +143,14 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                 border: 'none',
                 fontSize: '1.5rem',
                 cursor: 'pointer',
-                padding: '0.5rem'
+                padding: '0.5rem',
+                color: isDarkMode ? '#fff' : '#333'
               }}
               onClick={() => setSelectedEvent(null)}
             >
               ←
             </button>
-            <h1 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>Event Details</h1>
+            <h1 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem' }}>Event Details</h1>
           </div>
           <button
             style={{
@@ -148,7 +170,9 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
 
         <main style={mainContentStyle}>
           <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: isDarkMode
+              ? 'rgba(45, 55, 72, 0.95)'
+              : 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
             borderRadius: '20px',
             padding: '2rem',
@@ -169,9 +193,9 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                 {getEventTypeIcon(selectedEvent.type)} {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
               </div>
               
-              <h1 style={{ 
-                margin: '0 0 1rem 0', 
-                color: '#333', 
+              <h1 style={{
+                margin: '0 0 1rem 0',
+                color: isDarkMode ? '#fff' : '#333',
                 fontSize: '2.5rem',
                 fontWeight: '700'
               }}>
@@ -186,17 +210,17 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1.2rem' }}>📅</span>
-                  <span style={{ fontWeight: '600' }}>{formatDate(selectedEvent.date)}</span>
+                  <span style={{ fontWeight: '600', color: isDarkMode ? '#e2e8f0' : '#333' }}>{formatDate(selectedEvent.date)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1.2rem' }}>📍</span>
-                  <span style={{ fontWeight: '600' }}>{selectedEvent.venue}, {selectedEvent.place}</span>
+                  <span style={{ fontWeight: '600', color: isDarkMode ? '#e2e8f0' : '#333' }}>{selectedEvent.venue}, {selectedEvent.place}</span>
                 </div>
                 {selectedEvent.deadline && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1.2rem' }}>⏰</span>
                     <span style={{ fontWeight: '600', color: '#ef4444' }}>
-                      Deadline: {selectedEvent.deadline.toLocaleDateString()}
+                      Deadline: {new Date(selectedEvent.deadline).toLocaleDateString()}
                     </span>
                   </div>
                 )}
@@ -221,27 +245,27 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
 
             {/* Event Details */}
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ color: '#333', marginBottom: '1rem' }}>📋 Event Details</h2>
+              <h2 style={{ color: isDarkMode ? '#fff' : '#333', marginBottom: '1rem' }}>📋 Event Details</h2>
               <div style={{
-                background: '#f8f9fa',
+                background: isDarkMode ? '#4a5568' : '#f8f9fa',
                 padding: '1.5rem',
                 borderRadius: '15px',
                 lineHeight: '1.6'
               }}>
-                <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{selectedEvent.details}</p>
+                <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: isDarkMode ? '#e2e8f0' : '#333' }}>{selectedEvent.details}</p>
               </div>
             </div>
 
             {/* Requirements */}
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ color: '#333', marginBottom: '1rem' }}>🎯 Requirements</h2>
+              <h2 style={{ color: isDarkMode ? '#fff' : '#333', marginBottom: '1rem' }}>🎯 Requirements</h2>
               <div style={{
-                background: '#f8f9fa',
+                background: isDarkMode ? '#4a5568' : '#f8f9fa',
                 padding: '1.5rem',
                 borderRadius: '15px',
                 lineHeight: '1.6'
               }}>
-                <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{selectedEvent.requirements}</p>
+                <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: isDarkMode ? '#e2e8f0' : '#333' }}>{selectedEvent.requirements}</p>
               </div>
             </div>
 
@@ -291,13 +315,14 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
               border: 'none',
               fontSize: '1.5rem',
               cursor: 'pointer',
-              padding: '0.5rem'
+              padding: '0.5rem',
+              color: isDarkMode ? '#fff' : '#333'
             }}
             onClick={onBack}
           >
             ←
           </button>
-          <h1 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>🚀 Tech Updates & Opportunities</h1>
+          <h1 style={{ margin: 0, color: isDarkMode ? '#fff' : '#333', fontSize: '1.5rem' }}>Tech Updates & Opportunities</h1>
         </div>
         <button
           style={{
@@ -318,7 +343,9 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
       <main style={mainContentStyle}>
         {/* Search and Filter Section */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: isDarkMode
+            ? 'rgba(45, 55, 72, 0.95)'
+            : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(10px)',
           borderRadius: '20px',
           padding: '1.5rem',
@@ -335,17 +362,19 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
               style={{
                 width: '100%',
                 padding: '1rem',
-                border: '2px solid #e5e7eb',
+                border: isDarkMode ? '2px solid #4a5568' : '2px solid #e5e7eb',
                 borderRadius: '15px',
                 fontSize: '1rem',
                 outline: 'none',
-                transition: 'border-color 0.3s ease'
+                transition: 'border-color 0.3s ease',
+                background: isDarkMode ? '#2d3748' : '#fff',
+                color: isDarkMode ? '#e2e8f0' : '#333'
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = '#667eea';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.borderColor = isDarkMode ? '#4a5568' : '#e5e7eb';
               }}
             />
           </div>
@@ -395,13 +424,13 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
-            <h2 style={{ color: '#666' }}>Loading tech updates...</h2>
+            <h2 style={{ color: isDarkMode ? '#e2e8f0' : '#666' }}>Loading tech updates...</h2>
           </div>
         ) : filteredEvents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-            <h2 style={{ color: '#666' }}>No events found</h2>
-            <p style={{ color: '#888' }}>
+            <h2 style={{ color: isDarkMode ? '#e2e8f0' : '#666' }}>No events found</h2>
+            <p style={{ color: isDarkMode ? '#a0aec0' : '#888' }}>
               {searchTerm ? 'Try adjusting your search terms' : 'Check back later for new opportunities!'}
             </p>
           </div>
@@ -416,7 +445,9 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                 key={event.id}
                 onClick={() => setSelectedEvent(event)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.95)',
+                  background: isDarkMode
+                    ? 'rgba(45, 55, 72, 0.95)'
+                    : 'rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(10px)',
                   borderRadius: '20px',
                   padding: '1.5rem',
@@ -469,7 +500,7 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                 {/* Event Title */}
                 <h3 style={{
                   margin: '0 0 0.5rem 0',
-                  color: '#333',
+                  color: isDarkMode ? '#fff' : '#333',
                   fontSize: '1.3rem',
                   fontWeight: '700',
                   lineHeight: '1.3'
@@ -480,7 +511,7 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                 {/* Event Details Preview */}
                 <p style={{
                   margin: '0 0 1rem 0',
-                  color: '#666',
+                  color: isDarkMode ? '#a0aec0' : '#666',
                   fontSize: '0.9rem',
                   lineHeight: '1.5',
                   display: '-webkit-box',
@@ -492,7 +523,7 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                 </p>
 
                 {/* Event Meta Info */}
-                <div style={{ fontSize: '0.85rem', color: '#888' }}>
+                <div style={{ fontSize: '0.85rem', color: isDarkMode ? '#a0aec0' : '#888' }}>
                   <div style={{ marginBottom: '0.3rem' }}>
                     📅 {formatDate(event.date)}
                   </div>
@@ -501,7 +532,7 @@ const TechUpdates: React.FC<TechUpdatesProps> = ({ user, onBack, onLogout }) => 
                   </div>
                   {event.deadline && (
                     <div style={{ color: '#ef4444', fontWeight: '600' }}>
-                      ⏰ Deadline: {event.deadline.toLocaleDateString()}
+                      ⏰ Deadline: {new Date(event.deadline).toLocaleDateString()}
                     </div>
                   )}
                 </div>

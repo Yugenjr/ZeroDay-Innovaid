@@ -255,7 +255,6 @@ const StudentPolls: React.FC<StudentPollsProps> = ({ user, onBack, onLogout, isD
             ← Back to Dashboard
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
-            <span style={{ fontSize: '2rem' }}>📊</span>
             Polls & Feedback
           </div>
         </div>
@@ -434,7 +433,7 @@ const StudentPolls: React.FC<StudentPollsProps> = ({ user, onBack, onLogout, isD
                         onClick={() => handleVote(poll.id)}
                         disabled={isSubmitting || selectedForThisPoll.length === 0}
                       >
-                        {isSubmitting ? '⏳ Submitting...' : '🗳️ Submit Vote'}
+                        {isSubmitting ? 'Submitting...' : 'Submit Vote'}
                       </button>
                     </div>
                   )}

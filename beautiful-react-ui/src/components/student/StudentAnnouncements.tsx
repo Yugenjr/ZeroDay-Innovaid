@@ -294,7 +294,6 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
             ← Back to Dashboard
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', fontWeight: '800', color: isDarkMode ? '#fff' : '#333', transition: 'color 0.3s ease' }}>
-            <span style={{ fontSize: '2rem' }}>📢</span>
             Campus Announcements
           </div>
         </div>
@@ -494,7 +493,7 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                           }}
                           disabled
                         >
-                          🚫 Registration Full
+                          Registration Full
                         </button>
                       ) : announcement.registrationDeadline && new Date(announcement.registrationDeadline) < new Date() ? (
                         <button
@@ -511,7 +510,7 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                           }}
                           disabled
                         >
-                          ⏰ Registration Closed
+                          Registration Closed
                         </button>
                       ) : (
                         <button
@@ -537,7 +536,7 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                             e.currentTarget.style.backgroundColor = '#10b981';
                           }}
                         >
-                          📝 Register for Event
+                          Register for Event
                         </button>
                       )}
                     </div>
@@ -576,7 +575,7 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>
-                📝 Register for Event
+                Register for Event
               </h2>
               <button
                 style={{
@@ -759,7 +758,7 @@ const StudentAnnouncements: React.FC<StudentAnnouncementsProps> = ({ user, onBac
                 onClick={handleRegistrationSubmit}
                 disabled={isRegistering}
               >
-                {isRegistering ? '⏳ Registering...' : '📝 Register'}
+                {isRegistering ? 'Registering...' : 'Register'}
               </button>
             </div>
           </div>
