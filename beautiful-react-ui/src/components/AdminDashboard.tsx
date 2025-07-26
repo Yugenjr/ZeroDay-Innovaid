@@ -242,7 +242,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
     border: '1px solid rgba(255, 255, 255, 0.2)',
     cursor: 'pointer',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+    transition: 'transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease'
   };
 
   const getPendingComplaintsCount = () => {
@@ -286,13 +286,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       title: 'Polls & Feedback',
       description: 'Create polls, collect feedback, and analyze student responses.',
       key: 'polls'
-    },
-
-    {
-      icon: '�📚',
-      title: 'Library Management',
-      description: 'Oversee book inventory, reservations, and library resource allocation.',
-      key: 'library'
     },
     {
       icon: '📝',
@@ -465,7 +458,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             color: '#333', 
             marginBottom: '0.5rem' 
           }}>
-            Admin Dashboard 🛡️
+            Admin Dashboard
           </h1>
           <p style={{ 
             color: '#666', 
@@ -485,11 +478,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               onClick={() => handleSectionClick(section.key)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
+                e.currentTarget.style.boxShadow = '0 20px 40px rgba(255, 255, 0, 0.15), 0 0 25px rgba(255, 255, 0, 0.08)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.98)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
               }}
             >
               <div style={{

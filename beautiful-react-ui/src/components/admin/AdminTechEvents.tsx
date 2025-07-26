@@ -231,7 +231,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
             }}
             onClick={onLogout}
           >
-            🚪 Logout
+            Logout
           </button>
         </header>
 
@@ -568,7 +568,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
           >
             ←
           </button>
-          <h1 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>🚀 Manage Tech Events</h1>
+          <h1 style={{ margin: 0, color: '#333', fontSize: '1.5rem' }}>Manage Tech Events</h1>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button
@@ -583,7 +583,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
             }}
             onClick={() => setShowForm(true)}
           >
-            ➕ Create Event
+            Create Event
           </button>
           <button
             style={{
@@ -597,7 +597,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
             }}
             onClick={handleTestFirebase}
           >
-🧪 Test Realtime DB
+            Test Realtime DB
           </button>
           <button
             style={{
@@ -611,7 +611,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
             }}
             onClick={onLogout}
           >
-            🚪 Logout
+            Logout
           </button>
         </div>
       </header>
@@ -619,12 +619,40 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
       <main style={mainContentStyle}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', color: 'white' }}>⏳</div>
+            <div style={{
+              fontSize: '2rem',
+              marginBottom: '1rem',
+              color: 'white',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '50%',
+              width: '80px',
+              height: '80px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem auto'
+            }}>
+              ⟳
+            </div>
             <h2 style={{ color: 'white' }}>Loading events...</h2>
           </div>
         ) : events.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', color: 'white' }}>📝</div>
+            <div style={{
+              fontSize: '2rem',
+              marginBottom: '1rem',
+              color: 'white',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '50%',
+              width: '80px',
+              height: '80px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem auto'
+            }}>
+              +
+            </div>
             <h2 style={{ color: 'white' }}>No events created yet</h2>
             <p style={{ color: 'rgba(255,255,255,0.8)' }}>Create your first tech event to get started!</p>
           </div>
@@ -679,7 +707,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
                     fontSize: '0.7rem',
                     fontWeight: '600'
                   }}>
-                    🔥 HIGH
+                    HIGH
                   </div>
                 )}
 
@@ -711,10 +739,10 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
 
                 {/* Event Meta */}
                 <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1rem' }}>
-                  <div>📅 {new Date(event.date).toLocaleDateString()}</div>
-                  <div>📍 {event.venue}, {event.place}</div>
+                  <div><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</div>
+                  <div><strong>Venue:</strong> {event.venue}, {event.place}</div>
                   {event.deadline && (
-                    <div style={{ color: '#ef4444' }}>⏰ Deadline: {new Date(event.deadline).toLocaleDateString()}</div>
+                    <div style={{ color: '#ef4444' }}><strong>Deadline:</strong> {new Date(event.deadline).toLocaleDateString()}</div>
                   )}
                 </div>
 
@@ -734,7 +762,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
                       fontSize: '0.9rem'
                     }}
                   >
-                    ✏️ Edit
+                    Edit
                   </button>
                   <button
                     onClick={() => handleDelete(event.id!)}
@@ -750,7 +778,7 @@ const AdminTechEvents: React.FC<AdminTechEventsProps> = ({ user, onBack, onLogou
                       fontSize: '0.9rem'
                     }}
                   >
-                    🗑️ Delete
+                    Delete
                   </button>
                 </div>
               </div>

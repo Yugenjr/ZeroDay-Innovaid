@@ -6,6 +6,7 @@ import StudentTimetable from './student/StudentTimetable';
 import StudentHostelComplaints from './student/StudentHostelComplaints';
 import SkillExchange from './student/SkillExchange';
 import TechUpdates from './student/TechUpdates';
+import StudentLibrary from './student/StudentLibrary';
 
 import StudentPollsForms from './student/StudentPollsForms';
 import {
@@ -255,12 +256,15 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   };
 
   const welcomeCardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(40, 40, 60, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     padding: '2rem',
     marginBottom: '2rem',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s ease'
   };
 
   const servicesGridStyle: React.CSSProperties = {
@@ -270,13 +274,15 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   };
 
   const serviceCardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: isDarkMode
+      ? 'rgba(40, 40, 60, 0.95)'
+      : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
     borderRadius: '15px',
     padding: '1.5rem',
     boxShadow: '0 5px 20px rgba(0,0,0,0.1)',
     cursor: 'pointer',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+    transition: 'transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease'
   };
 
   const services = [
@@ -353,6 +359,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         return <StudentHostelComplaints user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'skillexchange':
         return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
+      case 'library':
+        return <StudentLibrary user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'polls':
         return <StudentPollsForms user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
 
@@ -1003,65 +1011,25 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
 
       <main style={mainContentStyle}>
         <div style={welcomeCardStyle}>
-          <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: '700', 
-            color: '#333', 
-            marginBottom: '0.5rem' 
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '700',
+            color: isDarkMode ? '#fff' : '#333',
+            marginBottom: '0.5rem',
+            transition: 'color 0.3s ease'
           }}>
             Welcome back, {user.name.split(' ')[0]}! 👋
           </h1>
-          <p style={{ 
-            color: '#666', 
-            fontSize: '1.1rem', 
-            marginBottom: '1.5rem' 
+          <p style={{
+            color: isDarkMode ? '#ccc' : '#666',
+            fontSize: '1.1rem',
+            marginBottom: '1.5rem',
+            transition: 'color 0.3s ease'
           }}>
             Welcome to your student dashboard. Explore our services to make the most of your college experience.
           </p>
           
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '1rem',
-            marginTop: '1.5rem'
-          }}>
-            <div style={{ 
-              background: '#f0f9ff', 
-              padding: '1rem', 
-              borderRadius: '10px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#0369a1', margin: '0 0 0.5rem 0' }}>12</h3>
-              <p style={{ color: '#0369a1', margin: 0, fontSize: '0.9rem' }}>Books Reserved</p>
-            </div>
-            <div style={{
-              background: '#f0fdf4',
-              padding: '1rem',
-              borderRadius: '10px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#15803d', margin: '0 0 0.5rem 0' }}>12</h3>
-              <p style={{ color: '#15803d', margin: 0, fontSize: '0.9rem' }}>Tech Opportunities</p>
-            </div>
-            <div style={{ 
-              background: '#fef3c7', 
-              padding: '1rem', 
-              borderRadius: '10px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#d97706', margin: '0 0 0.5rem 0' }}>24h</h3>
-              <p style={{ color: '#d97706', margin: 0, fontSize: '0.9rem' }}>Study Hours This Week</p>
-            </div>
-            <div style={{ 
-              background: '#fce7f3', 
-              padding: '1rem', 
-              borderRadius: '10px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#be185d', margin: '0 0 0.5rem 0' }}>4.8</h3>
-              <p style={{ color: '#be185d', margin: 0, fontSize: '0.9rem' }}>Service Rating</p>
-            </div>
-          </div>
+
         </div>
 
         <div style={servicesGridStyle}>
@@ -1072,11 +1040,19 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
               onClick={() => handleSectionClick(service.key)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = '0 15px 40px rgba(0,0,0,0.15)';
+                e.currentTarget.style.boxShadow = isDarkMode
+                  ? '0 15px 40px rgba(255, 255, 0, 0.2), 0 0 30px rgba(255, 255, 0, 0.1)'
+                  : '0 15px 40px rgba(255, 255, 0, 0.15), 0 0 25px rgba(255, 255, 0, 0.08)';
+                e.currentTarget.style.background = isDarkMode
+                  ? 'rgba(50, 50, 70, 0.98)'
+                  : 'rgba(255, 255, 255, 0.98)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 5px 20px rgba(0,0,0,0.1)';
+                e.currentTarget.style.background = isDarkMode
+                  ? 'rgba(40, 40, 60, 0.95)'
+                  : 'rgba(255, 255, 255, 0.95)';
               }}
             >
               <div style={{
@@ -1088,15 +1064,17 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
               <h3 style={{
                 fontSize: '1.25rem',
                 fontWeight: '600',
-                color: '#333',
-                margin: '0 0 0.5rem 0'
+                color: isDarkMode ? '#fff' : '#333',
+                margin: '0 0 0.5rem 0',
+                transition: 'color 0.3s ease'
               }}>
                 {service.title}
               </h3>
               <p style={{
-                color: '#666',
+                color: isDarkMode ? '#ccc' : '#666',
                 margin: 0,
-                lineHeight: '1.5'
+                lineHeight: '1.5',
+                transition: 'color 0.3s ease'
               }}>
                 {service.description}
               </p>

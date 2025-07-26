@@ -302,22 +302,34 @@ const SimpleLogin: React.FC = () => {
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    height: '100vh',
+    background: `
+      linear-gradient(rgba(102, 126, 234, 0.6), rgba(118, 75, 162, 0.6)),
+      url('/college-building.jpg')
+    `,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundAttachment: 'fixed',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontFamily: 'Arial, sans-serif',
-    padding: '2rem'
+    padding: '2rem',
+    overflow: 'hidden'
   };
 
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '20px',
-    padding: '2rem',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+    background: 'rgba(255, 255, 255, 0.85)',
+    backdropFilter: 'blur(15px)',
+    borderRadius: '25px',
+    padding: '2.5rem',
+    boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
     maxWidth: '500px',
-    width: '100%'
+    width: '100%',
+    position: 'relative',
+    zIndex: 1
   };
 
   const headerStyle: React.CSSProperties = {
@@ -378,8 +390,25 @@ const SimpleLogin: React.FC = () => {
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
+    <>
+      <style>
+        {`
+          body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+          }
+
+          /* Fallback background in case image doesn't load */
+          .login-container {
+            background-image:
+              linear-gradient(rgba(102, 126, 234, 0.6), rgba(118, 75, 162, 0.6)),
+              url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><defs><linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%2387CEEB;stop-opacity:1" /><stop offset="100%" style="stop-color:%23B0E0E6;stop-opacity:1" /></linearGradient></defs><rect fill="url(%23sky)" width="1200" height="600"/><rect fill="%2398FB98" y="600" width="1200" height="200"/><rect fill="%23F0E68C" x="50" y="200" width="280" height="400" rx="10"/><rect fill="%23E6E6FA" x="350" y="150" width="350" height="450" rx="10"/><rect fill="%23F0E68C" x="720" y="180" width="250" height="420" rx="10"/><rect fill="%23DDA0DD" x="990" y="220" width="180" height="380" rx="10"/><circle fill="%23228B22" cx="150" cy="650" r="40"/><circle fill="%23228B22" cx="400" cy="670" r="35"/><circle fill="%23228B22" cx="700" cy="660" r="45"/><circle fill="%23228B22" cx="1000" cy="650" r="38"/></svg>');
+          }
+        `}
+      </style>
+      <div style={containerStyle} className="login-container">
+        <div style={cardStyle}>
         <div style={headerStyle}>
           <div style={{
             margin: '0 auto 1rem',
@@ -580,6 +609,7 @@ const SimpleLogin: React.FC = () => {
         {message && <div style={messageStyle}>{message}</div>}
       </div>
     </div>
+    </>
   );
 };
 
