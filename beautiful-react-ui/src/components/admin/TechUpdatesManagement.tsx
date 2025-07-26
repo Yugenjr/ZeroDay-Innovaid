@@ -36,6 +36,9 @@ const TechUpdatesManagement: React.FC<TechUpdatesManagementProps> = ({ user, onB
   const [message, setMessage] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'analytics'>('list');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
   
   const [newUpdate, setNewUpdate] = useState<NewTechUpdate>({
     title: '',

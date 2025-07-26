@@ -35,7 +35,6 @@ export interface TechUpdate {
   tags: string[];
   readBy: string[]; // User IDs who have read this update
   totalReads: number;
-  emailSent: boolean;
   scheduledFor?: string | null; // For scheduled updates
 }
 
@@ -60,20 +59,11 @@ export interface UserNotification {
   readAt?: string | null;
 }
 
-export interface EmailNotificationLog {
-  id: string;
-  updateId: string;
-  recipientEmail: string;
-  recipientName: string;
-  sentAt: string;
-  status: 'sent' | 'failed' | 'pending';
-  errorMessage?: string;
-}
+// Email notifications removed - using in-app notifications only
 
 // Firebase Collections
 const TECH_UPDATES_COLLECTION = 'techUpdates';
 const USER_NOTIFICATIONS_COLLECTION = 'userNotifications';
-const EMAIL_LOGS_COLLECTION = 'emailNotificationLogs';
 
 // Test Firebase connection for tech updates
 export const testTechUpdatesConnection = async (): Promise<{ success: boolean; message: string }> => {
@@ -97,7 +87,7 @@ export const testTechUpdatesConnection = async (): Promise<{ success: boolean; m
 };
 
 // Create a new tech update
-export const createTechUpdate = async (updateData: Omit<TechUpdate, 'id' | 'createdAt' | 'updatedAt' | 'totalReads' | 'readBy' | 'emailSent'>): Promise<{ success: boolean; message: string; updateId?: string }> => {
+export const createTechUpdate = async (updateData: Omit<TechUpdate, 'id' | 'createdAt' | 'updatedAt' | 'totalReads' | 'readBy'>): Promise<{ success: boolean; message: string; updateId?: string }> => {
   try {
     console.log('📝 Creating new tech update:', updateData.title);
     
@@ -106,8 +96,7 @@ export const createTechUpdate = async (updateData: Omit<TechUpdate, 'id' | 'crea
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       totalReads: 0,
-      readBy: [],
-      emailSent: false
+      readBy: []
     };
 
     console.log('📝 Tech update data prepared:', techUpdate);
@@ -174,7 +163,6 @@ export const getAllTechUpdates = async (): Promise<{ success: boolean; updates: 
           tags: data.tags || [],
           readBy: data.readBy || [],
           totalReads: data.totalReads || 0,
-          emailSent: data.emailSent || false,
           scheduledFor: data.scheduledFor || null
         };
         updates.push(update);
@@ -247,17 +235,16 @@ export const getActiveTechUpdates = async (userRole?: string): Promise<{ success
           tags: data.tags || [],
           readBy: data.readBy || [],
           totalReads: data.totalReads || 0,
-          emailSent: data.emailSent || false,
           scheduledFor: data.scheduledFor || null
         };
         
         // Check if update hasn't expired
         if (!update.expiresAt || new Date(update.expiresAt) > now) {
           // Check target audience
-          if (update.targetAudience === 'all' || 
-              (userRole === 'student' && (update.targetAudience === 'students' || update.targetAudience === 'all')) ||
-              (userRole === 'admin' && (update.targetAudience === 'admin' || update.targetAudience === 'all')) ||
-              (userRole === 'faculty' && (update.targetAudience === 'faculty' || update.targetAudience === 'all'))) {
+          if (update.targetAudience === 'all' ||
+              (userRole === 'student' && update.targetAudience === 'students') ||
+              (userRole === 'admin' && update.targetAudience === 'admin') ||
+              (userRole === 'faculty' && update.targetAudience === 'faculty')) {
             updates.push(update);
             console.log(`📊 Loaded active tech update: ${update.title}`);
           }
@@ -364,13 +351,6 @@ export const deleteTechUpdate = async (updateId: string): Promise<{ success: boo
     const deleteNotificationPromises = notificationsSnapshot.docs.map(notificationDoc => deleteDoc(notificationDoc.ref));
     await Promise.all(deleteNotificationPromises);
 
-    // Delete email logs for this update
-    const emailLogsQuery = query(collection(db, EMAIL_LOGS_COLLECTION), where('updateId', '==', updateId));
-    const emailLogsSnapshot = await getDocs(emailLogsQuery);
-
-    const deleteEmailLogPromises = emailLogsSnapshot.docs.map(emailLogDoc => deleteDoc(emailLogDoc.ref));
-    await Promise.all(deleteEmailLogPromises);
-
     // Delete the tech update
     await deleteDoc(doc(db, TECH_UPDATES_COLLECTION, updateId));
 
@@ -391,16 +371,16 @@ export const deleteTechUpdate = async (updateId: string): Promise<{ success: boo
 export const markTechUpdateAsRead = async (updateId: string, userId: string): Promise<{ success: boolean; message: string }> => {
   try {
     const updateRef = doc(db, TECH_UPDATES_COLLECTION, updateId);
-    const updateDoc = await getDoc(updateRef);
+    const updateDocSnapshot = await getDoc(updateRef);
 
-    if (!updateDoc.exists()) {
+    if (!updateDocSnapshot.exists()) {
       return {
         success: false,
         message: 'Tech update not found'
       };
     }
 
-    const updateData = updateDoc.data() as TechUpdate;
+    const updateData = updateDocSnapshot.data() as TechUpdate;
 
     // Check if user hasn't already read this update
     if (!updateData.readBy.includes(userId)) {
@@ -419,8 +399,8 @@ export const markTechUpdateAsRead = async (updateId: string, userId: string): Pr
       const notificationSnapshot = await getDocs(notificationQuery);
 
       if (!notificationSnapshot.empty) {
-        const notificationDoc = notificationSnapshot.docs[0];
-        await updateDoc(notificationDoc.ref, {
+        const notificationDocRef = notificationSnapshot.docs[0];
+        await updateDoc(notificationDocRef.ref, {
           isRead: true,
           readAt: new Date().toISOString()
         });

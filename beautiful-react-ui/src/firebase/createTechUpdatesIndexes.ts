@@ -98,31 +98,7 @@ export const createTechUpdatesIndexes = async (): Promise<{ success: boolean; me
         )
       },
 
-      // Email Notification Logs indexes
-      {
-        name: 'emailNotificationLogs - updateId + sentAt',
-        query: () => query(
-          collection(db, 'emailNotificationLogs'),
-          where('updateId', '==', 'update-id'),
-          orderBy('sentAt', 'desc')
-        )
-      },
-      {
-        name: 'emailNotificationLogs - recipientEmail + sentAt',
-        query: () => query(
-          collection(db, 'emailNotificationLogs'),
-          where('recipientEmail', '==', 'user@example.com'),
-          orderBy('sentAt', 'desc')
-        )
-      },
-      {
-        name: 'emailNotificationLogs - status + sentAt',
-        query: () => query(
-          collection(db, 'emailNotificationLogs'),
-          where('status', '==', 'sent'),
-          orderBy('sentAt', 'desc')
-        )
-      }
+      // Email service removed - using in-app notifications only
     ];
 
     let successCount = 0;
@@ -224,13 +200,9 @@ export const testTechUpdatesSystem = async (): Promise<{ success: boolean; messa
     const notificationsQuery = query(collection(db, 'userNotifications'), limit(1));
     const notificationsSnapshot = await getDocs(notificationsQuery);
     
-    const emailLogsQuery = query(collection(db, 'emailNotificationLogs'), limit(1));
-    const emailLogsSnapshot = await getDocs(emailLogsQuery);
-
     const details = {
       techUpdatesCount: techUpdatesSnapshot.size,
       notificationsCount: notificationsSnapshot.size,
-      emailLogsCount: emailLogsSnapshot.size,
       collectionsAccessible: true
     };
 

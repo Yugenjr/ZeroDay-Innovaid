@@ -42,7 +42,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         // Subscribe to real-time notifications
         const notificationUnsubscribe = subscribeToNotifications(user.uid, (newNotifications) => {
           setNotifications(newNotifications.slice(0, 5)); // Show latest 5 notifications
-          setNotificationCount(newNotifications.filter(n => !n.isRead).length);
+          // Temporarily disable notification count to remove the "1" badge
+          setNotificationCount(0); // newNotifications.filter(n => !n.isRead).length
         });
 
         // Store the unsubscribe function
@@ -53,7 +54,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         try {
           const recentNotifications = await getRecentNotifications(user.uid, 5);
           setNotifications(recentNotifications);
-          setNotificationCount(recentNotifications.filter(n => !n.isRead).length);
+          // Temporarily disable notification count to remove the "1" badge
+          setNotificationCount(0); // recentNotifications.filter(n => !n.isRead).length
         } catch (fallbackError) {
           console.error('Error getting recent notifications:', fallbackError);
         }
