@@ -6,6 +6,7 @@ import StudentTimetable from './student/StudentTimetable';
 import StudentHostelComplaints from './student/StudentHostelComplaints';
 import SkillExchange from './student/SkillExchange';
 import TechUpdates from './student/TechUpdates';
+import TechUpdatesView from './student/TechUpdatesView';
 import StudentPollsForms from './student/StudentPollsForms';
 import {
   Notification,
@@ -221,6 +222,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
       key: 'polls'
     },
     {
+      icon: '📢',
+      title: 'Tech Updates & Notifications',
+      description: 'Stay updated with latest tech announcements, system updates, and important notifications.',
+      key: 'techUpdatesNotifications'
+    },
+    {
       icon: '🎓',
       title: 'Skill Exchange',
       description: 'Create courses, teach skills, and learn from peers in collaborative sessions.',
@@ -233,8 +240,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
       key: 'library'
     },
     {
-      icon: '�',
-      title: 'Tech Updates',
+      icon: '🚀',
+      title: 'Tech Events',
       description: 'Curated hackathons, internships, tech news, and opportunities to stay competitive.',
       key: 'techupdates'
     }
@@ -264,6 +271,83 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
         return <SkillExchange user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
       case 'polls':
         return <StudentPollsForms user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={isDarkMode} />;
+      case 'techUpdatesNotifications':
+        return (
+          <div style={containerStyle}>
+            <header style={headerStyle}>
+              <div style={logoStyle}>
+                <img
+                  src={isDarkMode ? "/logo-dark.png" : "/logo-light.png"}
+                  alt="InnovAid Logo"
+                  style={{
+                    height: '65px',
+                    width: 'auto',
+                    objectFit: 'contain'
+                  }}
+                />
+                <span>InnovAid</span>
+              </div>
+              <div style={userInfoStyle}>
+                <button
+                  onClick={handleBackToDashboard}
+                  style={{
+                    background: isDarkMode ? '#374151' : '#f3f4f6',
+                    color: isDarkMode ? '#fff' : '#333',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    transition: 'background 0.3s ease'
+                  }}
+                >
+                  ← Back to Dashboard
+                </button>
+                <div style={avatarStyle}>
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p style={{
+                    margin: 0,
+                    fontWeight: '600',
+                    color: isDarkMode ? '#fff' : '#333',
+                    transition: 'color 0.3s ease'
+                  }}>
+                    {user.name}
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    fontSize: '0.875rem',
+                    color: isDarkMode ? '#ccc' : '#666',
+                    transition: 'color 0.3s ease'
+                  }}>
+                    {user.department} • Year {user.year}
+                  </p>
+                </div>
+                <button
+                  onClick={onLogout}
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    transition: 'background 0.3s ease'
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            </header>
+            <main style={mainContentStyle}>
+              <TechUpdatesView user={user} isDarkMode={isDarkMode} />
+            </main>
+          </div>
+        );
       case 'techupdates':
         return <TechUpdates user={user} onBack={handleBackToDashboard} onLogout={onLogout} />;
       case 'profile':

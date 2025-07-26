@@ -6,6 +6,7 @@ import LostFoundManagement from './admin/LostFoundManagement';
 import TimetableManagement from './admin/TimetableManagement';
 import HostelManagement from './admin/HostelManagement';
 import PollsFormsManagement from './admin/PollsFormsManagement';
+import TechUpdatesManagement from './admin/TechUpdatesManagement';
 import RegistrationManagement from './admin/RegistrationManagement';
 import AdminTechEvents from './admin/AdminTechEvents';
 // @ts-ignore
@@ -240,21 +241,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       key: 'polls'
     },
     {
-      icon: '📚',
+      icon: '�',
+      title: 'Tech Updates',
+      description: 'Create and manage tech updates with notifications and email alerts.',
+      key: 'techUpdates'
+    },
+    {
+      icon: '�📚',
       title: 'Library Management',
       description: 'Oversee book inventory, reservations, and library resource allocation.',
       key: 'library'
     },
-
     {
-      icon: '�',
+      icon: '📝',
       title: 'Event Registrations',
       description: 'View and manage student registrations for campus events.',
       key: 'eventRegistrations',
       badge: pendingRegistrationsCount
     },
     {
-      icon: '�🚀',
+      icon: '🚀',
       title: 'Tech Events Management',
       description: 'Create and manage hackathons, internships, tech news, and opportunities with email notifications.',
       key: 'techevents'
@@ -350,6 +356,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         return <HostelManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} complaints={getSharedComplaints()} />;
       case 'polls':
         return <PollsFormsManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={false} />;
+      case 'techUpdates':
+        return <TechUpdatesManagement user={user} onBack={handleBackToDashboard} onLogout={onLogout} isDarkMode={false} />;
       case 'eventRegistrations':
         console.log('📝 Loading Registration Management component');
         return <RegistrationManagement user={user} onBack={handleBackToDashboard} />;
