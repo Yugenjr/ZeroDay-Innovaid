@@ -61,6 +61,15 @@ The main component of the application is `App.tsx`, which imports and uses the `
 
 If you would like to contribute to this project, please fork the repository and submit a pull request.
 
-### License
+### Team Members
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+Yugendra N - Full Stack Developer - Git
+Krithick AB - Full Stack Developer
+Karthick Naveen S - Debugging and git conflicts
+Maries Hari Bose B - FireBase 
+
+### have a wholesome experience of using our design !!
+
+
+
+
